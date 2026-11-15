@@ -376,8 +376,10 @@ views.settings = () => {
       ${tog('voice', 'Voice cues')}${tog('beeps', 'Countdown beeps')}${tog('vibrate', 'Vibrate')}
       ${tog('tvMode', 'TV mode (giant timer for a big screen)')}
       ${(() => { const vs = englishVoices(); return vs.length ? `<label class="w-row"><span>Voice</span><select data-input="voice" style="width:190px"><option value="">Automatic</option>${vs.map((v) => `<option value="${h(v.name)}" ${se.voiceName === v.name ? 'selected' : ''}>${h(v.name)} (${h(v.lang)})</option>`).join('')}</select></label>` : '<p class="muted small">No voices found on this device yet. See the tip below.</p>'; })()}
+      <label class="w-row"><span>Speaking speed</span><select data-input="vrate" style="width:190px">${[[0.8, 'Slow'], [0.9, 'Relaxed'], [0.95, 'Normal'], [1.05, 'Brisk'], [1.15, 'Fast']].map(([v, l]) => `<option value="${v}" ${(se.voiceRate || 0.95) === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
       <div class="row"><button class="btn ghost" data-act="testaudio">Test beeps</button><button class="btn ghost" data-act="testvoice">Test voice</button></div>
-      <details><summary class="muted small">Voice not working?</summary><p class="muted small">Make sure media volume is up. On Samsung phones go to <b>Settings → General management → Text-to-speech</b>, set the preferred engine to <b>Speech Services by Google</b>, and tap the cog to install English voice data. Then fully close and reopen the app.</p></details></div>
+      <details><summary class="muted small">Voice not working?</summary><p class="muted small">Make sure media volume is up. On Samsung phones go to <b>Settings → General management → Text-to-speech</b>, set the preferred engine to <b>Speech Services by Google</b>, and tap the cog to install English voice data. Then fully close and reopen the app.</p></details>
+      <p class="muted small">Tip: try a few voices. On Android the ones with "Google" in the name, or marked network or online, usually sound the most natural.</p></div>
     <div class="card"><div class="card-h">Cloud sync</div><p class="muted small">${Sync.status()}</p>${Sync.controls()}</div>
     <div class="card"><div class="card-h">Your data</div>
       <div class="row"><button class="btn ghost" data-act="export">Export backup</button><label class="btn ghost">Import backup<input type="file" accept="application/json" data-input="import" hidden></label></div>
@@ -574,6 +576,7 @@ document.addEventListener('change', (e) => {
   const k = el.dataset.input;
   if (k === 'name') S.update((x) => { x.profile.name = el.value.trim(); if (!x.profile.createdAt) x.profile.createdAt = new Date().toISOString(); });
   if (k === 'voice') { S.update((x) => { x.settings.voiceName = el.value; }); setVoice(); say('This is my voice.', true); }
+  if (k === 'vrate') { S.update((x) => { x.settings.voiceRate = Number(el.value); }); say('Round three. Ten kettlebell swings. Let us go.', true); }
   if (k === 'defmin') S.update((x) => { x.settings.defaultMin = Number(el.value); });
   if (k === 'blvl') B.lvl = Number(el.value);
   if (k === 'bexadd' && el.value) { B.ex.push({ id: el.value, qty: null }); render(); }

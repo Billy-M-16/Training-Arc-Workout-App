@@ -45,10 +45,21 @@ if ('speechSynthesis' in window) {
 }
 export function setVoice() { pickVoice(); }
 
+// Rewrite gym shorthand into words a speech engine says naturally.
+const SPOKEN = [
+  [/\bKB\b/g, 'kettlebell'], [/\bDB\b/g, 'dumbbell'], [/\bBB\b/g, 'barbell'], [/\bEZ\b/g, 'curl bar'],
+  [/\bRDL\b/g, 'Romanian deadlift'], [/\bEMOM\b/gi, 'E mom'], [/\bAMRAP\b/gi, 'am rap'], [/\bCARs\b/g, 'controlled circles'],
+  [/90\/90/g, 'ninety ninety'], [/(\d+)\/(\d+)/g, '$1 of $2'], [/\bTGU\b/g, 'Turkish get-up'], [/Figure-4/gi, 'figure four'],
+  [/\(each side\)/g, 'each side'], [/\(.*?\)/g, ''], [/(\d+) s\b/g, '$1 seconds'], [/(\d+) m\b/g, '$1 metres'],
+  [/\//g, ' '], [/·/g, '.'], [/\+/g, ' and '], [/×/g, ' times '], [/→/g, ' then '], [/-/g, ' '], [/\s{2,}/g, ' '],
+];
+export function spoken(text) { return SPOKEN.reduce((t, [re, rep]) => t.replace(re, rep), String(text)).trim(); }
+
 function speakNow(text) {
-  const u = new SpeechSynthesisUtterance(text);
+  const u = new SpeechSynthesisUtterance(spoken(text));
   if (voice) { u.voice = voice; u.lang = voice.lang; }
-  u.rate = 1.05;
+  u.rate = S.get().settings.voiceRate || 0.95;
+  u.pitch = 1;
   u.volume = 1;
   keep.push(u);
   if (keep.length > 5) keep.shift();
