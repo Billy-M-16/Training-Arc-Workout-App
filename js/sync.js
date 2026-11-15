@@ -337,11 +337,7 @@ export async function handle(act, el) {
     }
     if (act === 'squadleave') {
       const code = el.dataset.code;
-      if (!confirm('Leave this squad? You will drop off its leaderboard and stop seeing its shared workouts. Your own workouts, history and XP stay with you.')) return;
-      const mineShared = S.getSquadWorkouts().filter((w) => w.squad === code && w.byUid === user.uid);
-      if (mineShared.length && confirm(`Also remove the ${mineShared.length} workout${mineShared.length > 1 ? 's' : ''} you shared, so the squad can't use them any more? (Cancel to leave them for your mates.)`)) {
-        for (const w of mineShared) await fb.deleteDoc(fb.doc(fb.db, 'squads', code, 'workouts', w.docId)).catch(() => {});
-      }
+      if (!confirm('Leave this squad? You will drop off its leaderboard and stop seeing its shared workouts. Any workouts you shared stay in the squad for your mates. Your own workouts, history and XP stay with you.')) return;
       await fb.deleteDoc(fb.doc(fb.db, 'squads', code, 'members', user.uid)).catch(() => {});
       S.update((s) => { s.squads = (s.squads || []).filter((c) => c !== code); s.deleted = [...(s.deleted || []), 'squad:' + code]; });
       S.setSquadWorkouts(S.getSquadWorkouts().filter((w) => w.squad !== code));
