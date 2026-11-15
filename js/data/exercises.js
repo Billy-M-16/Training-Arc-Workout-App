@@ -229,6 +229,11 @@ const RAW = [
   // Rower / bike / treadmill extras
   ['row_time', 'Row', ['rower'], 'cardio', 'b1', '', 's', 'Legs, body, arms. Hard but repeatable.'],
   ['row_easy', 'Easy row', ['rower'], 'cardio_low', 'b1', '', 's', 'Long smooth strokes, about 20 strokes a minute.'],
+  ['row_mod', 'Row (moderate)', ['rower'], 'cardio', 'b1', '', 's', 'Rate 22–24, strong but sustainable. You could talk in short sentences.'],
+  ['row_hard', 'Row (hard)', ['rower'], 'cardio', 'b1', '', 's', 'Rate 26–28, race pace. Hold your split.'],
+  ['bike_mod', 'Bike (tempo)', ['bike'], 'cardio', '', '', 's', 'Comfortably hard. Steady cadence.'],
+  ['ski_mod', 'Ski erg (moderate)', ['ski'], 'cardio', 'b1 s1', '', 's', 'Strong, rhythmic pulls you can hold.'],
+  ['tread_mod', 'Treadmill tempo run', ['treadmill'], 'cardio', 'k2 a2', '', 's', 'Comfortably hard pace, steady breathing.'],
   ['row_m', 'Row', ['rower'], 'cardio', 'b1', '', 'm', 'Strong drive with the legs, quick hands away.'],
   ['bike_time', 'Bike', ['bike'], 'cardio', '', '', 's', 'Push hard, stay seated, breathe.'],
   ['bike_easy', 'Easy ride', ['bike'], 'cardio_low', '', '', 's', 'Easy spin, conversation pace.'],

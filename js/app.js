@@ -35,15 +35,18 @@ function durLabel(w) {
   return p.extra ? `${w.min} min <small>+ ${Math.round((p.warm + p.cool) / 60)} warm-up</small>` : `${w.min} min`;
 }
 
+// When kit is picked in the library filter, that choice overrides the max-pieces setting.
+const ctxFor = () => (LF.eqs.length ? { ...S.ctx(), maxEq: 4 } : S.ctx());
+
 function workoutCard(w, extra = '') {
-  const a = adaptWorkout(w, S.ctx());
+  const a = adaptWorkout(w, ctxFor());
   const m = workoutMeta(a.workout);
   const r = S.avgRating(w.id);
   return `<a class="wcard ${a.blocked ? 'blocked' : ''}" href="#/w/${encodeURIComponent(w.id)}">
     <div class="wcard-top"><span class="cat cat-${w.cat[0]}">${h(SLOT_NAMES[w.cat[0]])}</span>${w.bench ? '<span class="tag boss">Boss</span>' : ''}${w.custom ? '<span class="tag">Yours</span>' : ''}${w.squadShared ? `<span class="tag sq">Squad · ${h(w.byName || '')}</span>` : ''}${(w.custom || w.squadShared) ? (S.rankedLevelFor(w.id) ? '<span class="tag b">Ranked</span>' : '<span class="tag">Unranked · L1 XP</span>') : ''}${r ? `<span class="tag star">★ ${r.toFixed(1)}</span>` : ''}</div>
     <div class="wcard-name">${h(w.name)}</div>
     <div class="wcard-meta">${durLabel(w)} · ${h(eqLabel(m.eq))} · ${h(w.fmt || '')}</div>
-    <div class="wcard-foot">${lvlPips(w.lvl)}${m.quiet ? '<span class="tag q">Quiet</span>' : ''}${m.backFriendly ? '<span class="tag b">Back-friendly</span>' : ''}${a.swaps.length ? `<span class="tag sw">${a.swaps.length} swap${a.swaps.length > 1 ? 's' : ''}</span>` : ''}${a.blocked ? `<span class="tag no">${a.missing.length ? 'Needs ' + h(eqLabel(a.missing)) : 'Not possible right now'}</span>` : ''}</div>
+    <div class="wcard-foot">${lvlPips(w.lvl)}${m.quiet ? '<span class="tag q">Quiet</span>' : ''}${m.backFriendly ? '<span class="tag b">Back-friendly</span>' : ''}${a.swaps.length ? `<span class="tag sw">${a.swaps.length} swap${a.swaps.length > 1 ? 's' : ''}</span>` : ''}${a.blocked ? `<span class="tag no">${a.missing.length ? 'Needs ' + h(eqLabel(a.missing)) : a.tooMany ? `Uses ${a.eqCount} pieces of kit` : 'Not possible right now'}</span>` : ''}</div>
     ${extra}
   </a>`;
 }
@@ -147,30 +150,36 @@ views.home = () => {
 };
 
 // ---------- library ----------
-const LF = { q: '', cat: '', eq: '', len: '', lvl: '', quiet: false, back: false, bench: false, squad: false, all: false };
+const LF = { q: '', cat: '', eqs: [], bwOnly: false, len: '', lvl: '', quiet: false, back: false, bench: false, squad: false, all: false };
 views.library = () => {
-  const c = S.ctx();
+  const c = ctxFor();
   const st = S.get();
   let list = S.allWorkouts().map((w) => ({ w, a: adaptWorkout(w, c) }));
   if (!LF.all) list = list.filter((x) => !x.a.blocked);
   if (LF.q) { const q = LF.q.toLowerCase(); list = list.filter(({ w }) => (w.name + ' ' + w.desc + ' ' + w.fmt + ' ' + allExerciseIds(w).map((i) => EXERCISES[i]?.name).join(' ')).toLowerCase().includes(q)); }
   if (LF.cat) list = list.filter(({ w }) => w.cat.includes(LF.cat));
-  if (LF.eq) list = list.filter(({ a }) => (LF.eq === 'none' ? workoutMeta(a.workout).eq.length === 0 : workoutMeta(a.workout).eq.includes(LF.eq)));
+  if (LF.bwOnly) list = list.filter(({ a }) => { const m = workoutMeta(a.workout); return m.eq.length === 0 && !m.usesRun; });
+  else if (LF.eqs.length) {
+    const pick = new Set(LF.eqs);
+    list = list.filter(({ a }) => { const m = workoutMeta(a.workout); return m.eq.every((q) => pick.has(q)) && (!m.usesRun || pick.has('run')); });
+    list.forEach((x) => { const m = workoutMeta(x.a.workout); x.overlap = m.eq.filter((q) => pick.has(q)).length + (m.usesRun ? 1 : 0); });
+  }
   if (LF.len) { const [lo, hi] = LF.len.split('-').map(Number); list = list.filter(({ w }) => w.min >= lo && w.min <= hi); }
   if (LF.lvl) { const [lo, hi] = LF.lvl.split('-').map(Number); list = list.filter(({ w }) => w.lvl >= lo && w.lvl <= hi); }
   if (LF.quiet) list = list.filter(({ a }) => workoutMeta(a.workout).quiet);
   if (LF.back) list = list.filter(({ a }) => workoutMeta(a.workout).backFriendly);
   if (LF.bench) list = list.filter(({ w }) => w.bench);
   if (LF.squad) list = list.filter(({ w }) => w.squadShared || w.custom);
-  list.sort((x, y) => (x.a.blocked - y.a.blocked) || S.scoreWorkout(y.w) - S.scoreWorkout(x.w));
-  const owned = ['none', ...st.settings.owned.filter((q) => q !== 'run')];
+  list.sort((x, y) => (x.a.blocked - y.a.blocked) || ((y.overlap || 0) - (x.overlap || 0)) || S.scoreWorkout(y.w) - S.scoreWorkout(x.w));
+  const owned = st.settings.owned;
   const chip = (key, val, label) => `<button class="chip ${LF[key] === val ? 'on' : ''}" data-act="lf" data-k="${key}" data-v="${val}">${h(label)}</button>`;
   const tog = (key, label) => `<button class="chip ${LF[key] ? 'on' : ''}" data-act="lft" data-k="${key}">${h(label)}</button>`;
   return `
     <h1 class="title">Library</h1>
     <input class="search" type="search" placeholder="Search workouts or exercises" value="${h(LF.q)}" data-input="lfq">
     <div class="chips scroll">${chip('cat', '', 'All types')}${Object.entries(CATEGORIES).map(([k, v]) => chip('cat', k, v)).join('')}</div>
-    <div class="chips scroll">${chip('eq', '', 'Any kit')}${owned.map((q) => chip('eq', q, q === 'none' ? 'Bodyweight only' : EQUIPMENT[q].name)).join('')}</div>
+    <div class="lbl small">Use this kit <span class="muted">(pick up to 4, bodyweight always included)</span></div>
+    <div class="chips"><button class="chip ${!LF.eqs.length && !LF.bwOnly ? 'on' : ''}" data-act="lfeq" data-v="">Any of my kit</button><button class="chip ${LF.bwOnly ? 'on' : ''}" data-act="lfeq" data-v="bw">Bodyweight only</button>${owned.map((q) => `<button class="chip ${LF.eqs.includes(q) ? 'on' : ''}" data-act="lfeq" data-v="${q}">${h(EQUIPMENT[q].short)}</button>`).join('')}</div>
     <div class="chips scroll">${chip('len', '', 'Any length')}${chip('len', '10-20', '≤20 min')}${chip('len', '25-35', '25–35 min')}${chip('len', '40-45', '40–45 min')}
       ${chip('lvl', '', 'Any level')}${chip('lvl', '1-2', 'Easy')}${chip('lvl', '3-3', 'Solid')}${chip('lvl', '4-5', 'Hard')}</div>
     <div class="chips scroll">${tog('quiet', 'Quiet')}${tog('back', 'Back-friendly')}${tog('squad', 'Squad workouts')}${tog('bench', 'Boss fights')}${tog('all', 'Show locked')}</div>
@@ -183,7 +192,7 @@ let pendingWeights = {};
 views.workout = (id, params) => {
   const w = S.workoutById(id);
   if (!w) return '<p>Workout not found.</p>';
-  const c = S.ctx();
+  const c = ctxFor();
   const a = adaptWorkout(w, c);
   const m = workoutMeta(a.workout);
   const plan = warmCoolPlan(w);
@@ -204,7 +213,7 @@ views.workout = (id, params) => {
       <div class="detail-meta">${h(eqLabel(m.eq))}${m.quiet ? ' · <span class="tag q">Quiet</span>' : ' · <span class="tag">Noisy: outside best</span>'}${m.backFriendly ? ' <span class="tag b">Back-friendly</span>' : ''}${r ? ` <span class="tag star">★ ${r.toFixed(1)}</span>` : ''}</div>
       <p>${h(w.desc || '')}</p>
     </div>
-    ${a.blocked ? `<div class="warn">${a.missing.length ? `You need ${h(eqLabel(a.missing))} for this one. Tick it in settings once you have it.` : 'With your current injury settings there is no safe swap for part of this workout.'}</div>` : ''}
+    ${a.blocked ? `<div class="warn">${a.missing.length ? `You need ${h(eqLabel(a.missing))} for this one. Tick it in settings once you have it.` : a.tooMany ? `This one uses ${a.eqCount} pieces of kit and your limit is ${st.settings.maxEq || 2}. Change it in Settings, or pick this kit in the library's equipment filter.` : 'With your current injury settings there is no safe swap for part of this workout.'}</div>` : ''}
     ${a.swaps.length ? `<div class="info"><b>Adjusted for you</b> (${[st.settings.quiet ? 'quiet mode' : '', Object.values(st.injuries).some((v) => v) ? 'injuries' : ''].filter(Boolean).join(', ') || 'your kit'}):<ul>${a.swaps.map((s) => `<li>${h(EXERCISES[s.from].name)} → <b>${h(EXERCISES[s.to].name)}</b></li>`).join('')}</ul></div>` : ''}
     ${easeWeek ? '<div class="info">Ease-in / deload week: pick weights you could do for twice the reps.</div>' : ''}
     ${best ? `<div class="info"><b>Best score:</b> ${h(S.fmtScore(best.score))} (${best.date.slice(0, 10)})</div>` : ''}
@@ -226,7 +235,7 @@ views.workout = (id, params) => {
 
 function startWorkout(id, planned) {
   const w = S.workoutById(id);
-  const c = S.ctx();
+  const c = ctxFor();
   const a = adaptWorkout(w, c);
   const plan = warmCoolPlan(w);
   const optWarm = document.getElementById('opt-warm');
@@ -372,7 +381,8 @@ views.settings = () => {
     <h1 class="title">Settings</h1>
     <div class="card form"><label>Your name <input type="text" data-input="name" value="${h(s.profile.name)}" placeholder="Billy"></label>
       <label>Usual session length <select data-input="defmin">${[15, 20, 25, 30, 35, 40, 45].map((m) => `<option ${se.defaultMin === m ? 'selected' : ''}>${m}</option>`).join('')}</select></label></div>
-    <div class="card"><div class="card-h">Equipment you have</div><p class="muted small">Workouts only use what's ticked. Max two pieces per workout. ${se.owned.filter((q) => q !== 'run').length} ticked.</p>
+    <div class="card"><div class="card-h">Equipment you have</div><p class="muted small">Workouts only use what's ticked. ${se.owned.filter((q) => q !== 'run').length} ticked.</p>
+      <label class="w-row"><span>Max pieces of kit per workout<small>Bodyweight is always on top</small></span><select data-input="maxeq">${[1, 2, 3, 4].map((n) => `<option value="${n}" ${(se.maxEq || 2) === n ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
       ${[...new Set(eqKeys.map((q) => EQUIPMENT[q].group))].map((g) => `<div class="lbl">${h(g)}</div><div class="chips">${eqKeys.filter((q) => EQUIPMENT[q].group === g).map((q) => `<button class="chip ${se.owned.includes(q) ? 'on' : ''}" data-act="own" data-q="${q}">${h(EQUIPMENT[q].name)}</button>`).join('')}</div>`).join('')}</div>
     <div class="card"><div class="card-h">During workouts</div>
       ${tog('quiet', 'Quiet mode (no jumping, slamming or throwing)')}
@@ -462,7 +472,7 @@ function saveBuilt() {
   }
   const w = { id: 'c' + Date.now(), custom: true, name: B.name.trim(), cat: B.cat, lvl: B.lvl, min: B.min, fmt: B.mode === 'quick' ? { amrap: 'AMRAP', emom: 'EMOM', fortime: 'For time', int: 'Intervals' }[B.nmode] : { rounds: 'Rounds', sets: 'Supersets', int: 'Intervals', emom: 'EMOM', amrap: 'AMRAP', ladder: 'Ladder', flow: 'Flow' }[B.t], desc: 'Your own workout.', blocks: [block], noWarm: B.cat.length === 1 && B.cat[0] === 'mobility' };
   const m = workoutMeta(w);
-  if (m.eq.length > 2) return toast('Max two pieces of equipment per workout');
+  if (m.eq.length > 4) return toast('Max four pieces of equipment per workout');
   S.update((s) => { s.custom.push(w); });
   B.ex = []; B.name = ''; B.note = '';
   toast('Saved');
@@ -479,7 +489,7 @@ function importJSON(text) {
       if (!raw.name || !Array.isArray(raw.blocks)) throw new Error('missing name or blocks');
       const w = { cat: ['full'], lvl: 3, min: 30, fmt: 'Custom', desc: '', ...raw, id: 'c' + Date.now() + '-' + n, custom: true };
       allExerciseIds(w).forEach((id) => { if (!EXERCISES[id]) throw new Error('unknown exercise ' + id); });
-      if (workoutMeta(w).eq.length > 2) throw new Error('more than two pieces of equipment');
+      if (workoutMeta(w).eq.length > 4) throw new Error('more than four pieces of equipment');
       S.update((s) => { s.custom.push(w); });
       n++;
     } catch (e) { toast(`Skipped "${raw.name || '?'}": ${e.message}`); }
@@ -531,6 +541,15 @@ document.addEventListener('click', (e) => {
     case 'endarc': if (confirm('End this training arc? Your history and XP stay.')) S.update((x) => { x.program = null; }); break;
     case 'lf': LF[el.dataset.k] = el.dataset.v; render(); break;
     case 'lft': LF[el.dataset.k] = !LF[el.dataset.k]; render(); break;
+    case 'lfeq': {
+      const v = el.dataset.v;
+      if (!v) { LF.eqs = []; LF.bwOnly = false; } else if (v === 'bw') { LF.eqs = []; LF.bwOnly = !LF.bwOnly; } else {
+        LF.bwOnly = false;
+        if (LF.eqs.includes(v)) LF.eqs = LF.eqs.filter((x) => x !== v);
+        else if (LF.eqs.length >= 4) { toast('Pick up to 4 pieces of kit'); break; } else LF.eqs = [...LF.eqs, v];
+      }
+      render(); break;
+    }
     case 'start': startWorkout(el.dataset.id, el.dataset.planned === '1'); break;
     case 'delcustom': if (confirm('Delete this workout?')) { S.update((x) => { x.custom = x.custom.filter((w) => w.id !== el.dataset.id); x.deleted = [...(x.deleted || []), el.dataset.id]; }); location.hash = '#/library'; } break;
     case 'own': S.update((x) => { const q = el.dataset.q; x.settings.owned = x.settings.owned.includes(q) ? x.settings.owned.filter((y) => y !== q) : [...x.settings.owned, q]; }); break;
@@ -583,6 +602,7 @@ document.addEventListener('change', (e) => {
   if (k === 'name') S.update((x) => { x.profile.name = el.value.trim(); if (!x.profile.createdAt) x.profile.createdAt = new Date().toISOString(); });
   if (k === 'voice') { S.update((x) => { x.settings.voiceName = el.value; }); setVoice(); say('This is my voice.', true); }
   if (k === 'vrate') { S.update((x) => { x.settings.voiceRate = Number(el.value); }); say('Round three. Ten kettlebell swings. Let us go.', true); }
+  if (k === 'maxeq') S.update((x) => { x.settings.maxEq = Number(el.value); if (x.program) x.program.chosen = {}; });
   if (k === 'defmin') S.update((x) => { x.settings.defaultMin = Number(el.value); });
   if (k === 'blvl') B.lvl = Number(el.value);
   if (k === 'bexadd' && el.value) { B.ex.push({ id: el.value, qty: null }); render(); }

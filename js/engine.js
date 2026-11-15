@@ -63,6 +63,7 @@ export function makeContext(settings, injuries = {}) {
   return {
     owned: new Set(['bw', ...(settings.owned || [])]),
     quiet: !!settings.quiet,
+    maxEq: settings.maxEq || 2,
     limits,
   };
 }
@@ -127,10 +128,11 @@ export function findSwap(id, ctx, allowedEq, used = new Set()) {
 export function adaptWorkout(w, ctx) {
   const meta = workoutMeta(w);
   const missing = meta.eq.filter((q) => !ctx.owned.has(q));
+  const tooMany = meta.eq.length > (ctx.maxEq || 4);
   const allowedEq = new Set(['bw', 'run', ...meta.eq]);
   const swaps = [];
   const used = new Set(allExerciseIds(w));
-  let blocked = missing.length > 0;
+  let blocked = missing.length > 0 || tooMany;
   const blocks = w.blocks.map((b) => {
     const entries = blockEntries(b).map((e) => {
       const ex = EXERCISES[e.id];
@@ -150,7 +152,7 @@ export function adaptWorkout(w, ctx) {
     else nb.ex = entries.map(fmtEntry);
     return nb;
   });
-  return { workout: { ...w, blocks }, swaps, blocked, missing };
+  return { workout: { ...w, blocks }, swaps, blocked, missing, tooMany, eqCount: meta.eq.length };
 }
 
 // ---------- warm-up / cool-down ----------
