@@ -89,6 +89,45 @@ export function setSquadWorkouts(list) {
   listeners.forEach((l) => l(state));
 }
 export function getSquadWorkouts() { return squadWorkouts; }
+export const session = { uid: null };
+
+// Added workouts earn level-1 XP until the squad ranks them.
+export function rankedLevelFor(wid) {
+  for (const w of squadWorkouts) {
+    if (!w.ranked) continue;
+    if (w.id === wid) return w.ranked.level;
+    if (w.sharedFrom === wid && session.uid && w.byUid === session.uid) return w.ranked.level;
+  }
+  return null;
+}
+export function needsRanking(w) { return !!(w && (w.custom || w.squadShared) && !rankedLevelFor(w.id)); }
+export function xpLevel(w) {
+  if (w.custom || w.squadShared) return rankedLevelFor(w.id) || 1;
+  return w.lvl;
+}
+
+// When a workout gets ranked, top up the points of earlier sessions on their original dates.
+export function applyBackpay() {
+  const todo = state.history.filter((e) => e.provisional && rankedLevelFor(e.wid));
+  if (!todo.length) return 0;
+  let total = 0;
+  update((s) => {
+    for (const t of todo) {
+      const e = s.history.find((x) => x.id === t.id);
+      const L = rankedLevelFor(e.wid);
+      const full = sessionPoints({ lvl: L }, e.minExact ?? e.min, { planned: e.planned });
+      const day = e.date.slice(0, 10);
+      const dayTotal = s.history.filter((x) => x.date.slice(0, 10) === day).reduce((a, x) => a + (x.points || 0), 0);
+      const delta = Math.max(0, Math.min(full - e.points, DAILY_CAP - dayTotal));
+      e.points += delta;
+      e.backpaid = (e.backpaid || 0) + delta;
+      e.lvl = L;
+      e.provisional = false;
+      total += delta;
+    }
+  });
+  return total;
+}
 
 export function allWorkouts() {
   const mine = new Set(state.custom.map((w) => w.id));
@@ -135,7 +174,7 @@ export function suggestWeight(exId) {
 }
 
 // ---------- recording a session ----------
-export function recordSession({ workout, minutes, rating, rpe, exRatings = {}, weights = {}, score = null, planned = false }) {
+export function recordSession({ workout, minutes, rating, rpe, exRatings = {}, weights = {}, score = null, planned = false, levelVote = null }) {
   const date = nowLocal();
   const today = todayISO();
   let benchmarkPR = false;
@@ -143,10 +182,12 @@ export function recordSession({ workout, minutes, rating, rpe, exRatings = {}, w
     const prev = state.history.filter((h) => h.wid === workout.id && h.score);
     benchmarkPR = prev.length > 0 && prev.every((h) => betterScore(score, h.score));
   }
-  let pts = sessionPoints(workout, minutes, { planned, benchmarkPR });
+  const provisional = needsRanking(workout);
+  const effLvl = xpLevel(workout);
+  let pts = sessionPoints({ ...workout, lvl: effLvl }, minutes, { planned, benchmarkPR });
   const already = pointsOn(today);
   pts = Math.max(0, Math.min(pts, DAILY_CAP - already));
-  const entry = { id: 's' + Date.now(), wid: workout.id, name: workout.name, cat: workout.cat, date, min: Math.round(minutes), lvl: workout.lvl, points: pts, rating, rpe, score, planned, bench: !!workout.bench, pr: benchmarkPR };
+  const entry = { id: 's' + Date.now(), wid: workout.id, name: workout.name, cat: workout.cat, date, min: Math.round(minutes), minExact: Math.round(minutes * 10) / 10, lvl: effLvl, points: pts, rating, rpe, score, planned, bench: !!workout.bench, pr: benchmarkPR, provisional, levelVote: levelVote || null };
   update((s) => {
     s.history.unshift(entry);
     if (rating) { const r = s.wRatings[workout.id] || { sum: 0, n: 0 }; r.sum += rating; r.n += 1; s.wRatings[workout.id] = r; }

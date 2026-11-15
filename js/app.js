@@ -40,7 +40,7 @@ function workoutCard(w, extra = '') {
   const m = workoutMeta(a.workout);
   const r = S.avgRating(w.id);
   return `<a class="wcard ${a.blocked ? 'blocked' : ''}" href="#/w/${encodeURIComponent(w.id)}">
-    <div class="wcard-top"><span class="cat cat-${w.cat[0]}">${h(SLOT_NAMES[w.cat[0]])}</span>${w.bench ? '<span class="tag boss">Boss</span>' : ''}${w.custom ? '<span class="tag">Yours</span>' : ''}${w.squadShared ? `<span class="tag sq">Squad · ${h(w.byName || '')}</span>` : ''}${r ? `<span class="tag star">★ ${r.toFixed(1)}</span>` : ''}</div>
+    <div class="wcard-top"><span class="cat cat-${w.cat[0]}">${h(SLOT_NAMES[w.cat[0]])}</span>${w.bench ? '<span class="tag boss">Boss</span>' : ''}${w.custom ? '<span class="tag">Yours</span>' : ''}${w.squadShared ? `<span class="tag sq">Squad · ${h(w.byName || '')}</span>` : ''}${(w.custom || w.squadShared) ? (S.rankedLevelFor(w.id) ? '<span class="tag b">Ranked</span>' : '<span class="tag">Unranked · L1 XP</span>') : ''}${r ? `<span class="tag star">★ ${r.toFixed(1)}</span>` : ''}</div>
     <div class="wcard-name">${h(w.name)}</div>
     <div class="wcard-meta">${durLabel(w)} · ${h(eqLabel(m.eq))} · ${h(w.fmt || '')}</div>
     <div class="wcard-foot">${lvlPips(w.lvl)}${m.quiet ? '<span class="tag q">Quiet</span>' : ''}${m.backFriendly ? '<span class="tag b">Back-friendly</span>' : ''}${a.swaps.length ? `<span class="tag sw">${a.swaps.length} swap${a.swaps.length > 1 ? 's' : ''}</span>` : ''}${a.blocked ? `<span class="tag no">${a.missing.length ? 'Needs ' + h(eqLabel(a.missing)) : 'Not possible right now'}</span>` : ''}</div>
@@ -239,6 +239,7 @@ function startWorkout(id, planned) {
       if (entry) {
         toast(`+${entry.points} XP${entry.pr ? ' · NEW RECORD!' : ''}`);
         if (st().program && planned) S.update((s) => { s.program.done[S.todayISO()] = entry.id; });
+        if (entry.levelVote) Sync.fetchSquadWorkouts(true);
         location.hash = '#/home';
       }
       render();
@@ -357,7 +358,7 @@ views.me = () => {
     <div class="card"><div class="card-h">Body weight</div>${chart || '<p class="muted small">Log your weight a couple of times to see a trend.</p>'}
       <form class="row" data-form="bw"><input type="number" step="0.1" inputmode="decimal" name="kg" placeholder="kg" aria-label="Body weight in kg"><button class="btn">Log</button></form></div>
     <div class="card"><div class="card-h">Squads</div>${Sync.squadsCard()}</div>
-    <div class="card"><div class="card-h">History</div>${s.history.slice(0, 40).map((x) => `<div class="hist"><span>${h(x.name)}</span><small>${x.date.slice(0, 10)}${x.min ? ` · ${x.min} min` : ''} · +${x.points} XP${x.rating ? ' · ' + '★'.repeat(x.rating) : ''}${x.score ? ' · ' + h(S.fmtScore(x.score)) : ''}</small><button class="x" data-act="delhist" data-id="${x.id}" aria-label="Delete">✕</button></div>`).join('') || '<p class="muted small">Nothing yet. Your first mission is waiting.</p>'}</div>
+    <div class="card"><div class="card-h">History</div>${s.history.slice(0, 40).map((x) => `<div class="hist"><span>${h(x.name)}</span><small>${x.date.slice(0, 10)}${x.min ? ` · ${x.min} min` : ''} · +${x.points} XP${x.provisional ? ' (L1, awaiting squad rank)' : ''}${x.backpaid ? ` (incl. ${x.backpaid} back-paid)` : ''}${x.rating ? ' · ' + '★'.repeat(x.rating) : ''}${x.score ? ' · ' + h(S.fmtScore(x.score)) : ''}</small><button class="x" data-act="delhist" data-id="${x.id}" aria-label="Delete">✕</button></div>`).join('') || '<p class="muted small">Nothing yet. Your first mission is waiting.</p>'}</div>
     <a class="btn ghost wide" href="#/settings">Settings and equipment</a>`;
 };
 

@@ -251,17 +251,20 @@ export function startPlayer({ root, original, workout, steps, weights = {}, plan
     const sc = score();
     const exIds = allExerciseIds(workout).filter((id) => EXERCISES[id] && EXERCISES[id].pattern !== 'mobility' || workout.cat.includes('mobility'));
     const loaded = exIds.filter((id) => S.loadedEquipment(id));
-    const pts = sessionPoints(original, minutes, { planned });
-    const R = { rating: 0, rpe: 'right', ex: {}, w: { ...weights } };
+    const pts = sessionPoints({ ...original, lvl: S.xpLevel(original) }, minutes, { planned });
+    const voting = S.needsRanking(original);
+    const R = { rating: 0, rpe: 'right', ex: {}, w: { ...weights }, vote: null };
     root.className = 'player report' + (tv ? ' tv' : '');
     root.innerHTML = `
       <div class="report-wrap">
         <div class="burst big">${early ? 'SESSION LOGGED' : 'MISSION COMPLETE!'}</div>
         <div class="report-stats">
           <div><span>${fmtTime(P.clock / 1000)}</span><small>time</small></div>
-          <div><span>+${pts}</span><small>XP (est.)</small></div>
+          <div><span>+${pts}</span><small>${voting ? 'XP now (L1)' : 'XP (est.)'}</small></div>
           ${sc ? `<div><span>${h(S.fmtScore(sc))}${sc.capped ? '*' : ''}</span><small>${sc.capped ? 'capped' : 'score'}</small></div>` : ''}
         </div>
+        ${voting ? `<div class="info"><b>Squad ranking:</b> what level was this workout? Your vote helps set its level. Until it's ranked it earns level-1 XP, and you get back-paid when it's ranked.</div>
+        <div class="chips" id="r-vote">${[1, 2, 3, 4, 5].map((n) => `<button class="chip" data-n="${n}">L${n} · ${['', 'Easy', 'Steady', 'Solid', 'Hard', 'Savage'][n]}</button>`).join('')}</div>` : ''}
         <h3>Rate the workout</h3>
         <div class="stars" id="r-stars">${[1, 2, 3, 4, 5].map((n) => `<button data-n="${n}">★</button>`).join('')}</div>
         <h3>How hard was it?</h3>
@@ -279,6 +282,10 @@ export function startPlayer({ root, original, workout, steps, weights = {}, plan
       R.rating = Number(b.dataset.n);
       root.querySelectorAll('#r-stars button').forEach((x) => x.classList.toggle('on', Number(x.dataset.n) <= R.rating));
     }));
+    root.querySelectorAll('#r-vote button').forEach((b) => (b.onclick = () => {
+      R.vote = Number(b.dataset.n);
+      root.querySelectorAll('#r-vote button').forEach((x) => x.classList.toggle('on', x === b));
+    }));
     root.querySelectorAll('#r-rpe button').forEach((b) => (b.onclick = () => {
       R.rpe = b.dataset.k;
       root.querySelectorAll('#r-rpe button').forEach((x) => x.classList.toggle('on', x === b));
@@ -291,7 +298,7 @@ export function startPlayer({ root, original, workout, steps, weights = {}, plan
     })));
     root.querySelectorAll('.weights input').forEach((inp) => (inp.oninput = () => { R.w[inp.dataset.id] = Number(inp.value) || 0; }));
     root.querySelector('#r-save').onclick = () => {
-      const entry = S.recordSession({ workout: original, minutes, rating: R.rating || null, rpe: R.rpe, exRatings: R.ex, weights: R.w, score: sc, planned });
+      const entry = S.recordSession({ workout: original, minutes, rating: R.rating || null, rpe: R.rpe, exRatings: R.ex, weights: R.w, score: sc, planned, levelVote: R.vote });
       exit(entry);
     };
     root.querySelector('#r-discard').onclick = () => { if (confirmQuit()) exit(null); };

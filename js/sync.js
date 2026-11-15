@@ -32,6 +32,7 @@ export async function init(opts) {
     ready = true;
     authM.onAuthStateChanged(auth, async (u) => {
       user = u;
+      S.session.uid = u ? u.uid : null;
       if (unsubDoc) { unsubDoc(); unsubDoc = null; }
       if (u) await startSync();
       hooks.rerender();
@@ -158,43 +159,76 @@ export async function fetchSquadWorkouts(force = false) {
   if (!user || !fb) return;
   if (!force && Date.now() - lastFetch < 120000) return;
   lastFetch = Date.now();
-  const { collection, getDocs, doc, getDoc } = fb;
+  const { collection, getDocs, doc, getDoc, setDoc, updateDoc } = fb;
   const out = [];
-  for (const code of S.get().squads || []) {
+  const me = S.get();
+  for (const code of me.squads || []) {
     try {
       if (!lb.cache[code]) { const sq = await getDoc(doc(fb.db, 'squads', code)); if (sq.exists()) lb.cache[code] = { name: sq.data().name }; }
+      const memberCount = (await getDocs(collection(fb.db, 'squads', code, 'members'))).size;
+      const needed = Math.min(5, Math.max(1, memberCount));
       const snap = await getDocs(collection(fb.db, 'squads', code, 'workouts'));
-      snap.forEach((d) => {
+      for (const d of snap.docs) {
         try {
           const data = d.data();
           const w = JSON.parse(data.workout);
-          out.push({ ...w, id: `sq-${code}-${d.id}`, docId: d.id, squad: code, squadName: lb.cache[code]?.name || code, sharedFrom: data.srcId, byUid: data.by, byName: data.byName, custom: false, squadShared: true });
+          const sqId = `sq-${code}-${d.id}`;
+          let ranked = data.ranked || null;
+          let votes = 0;
+          if (!ranked) {
+            const vs = await getDocs(collection(fb.db, 'squads', code, 'workouts', d.id, 'votes'));
+            const levels = vs.docs.map((v) => v.data().level);
+            // send my vote if I have one saved locally and haven't sent it yet
+            if (!vs.docs.some((v) => v.id === user.uid)) {
+              const mine = me.history.find((e) => e.levelVote && (e.wid === sqId || (data.by === user.uid && e.wid === data.srcId)));
+              if (mine) {
+                await setDoc(doc(fb.db, 'squads', code, 'workouts', d.id, 'votes', user.uid), { level: mine.levelVote, name: me.profile.name || '', at: Date.now() });
+                levels.push(mine.levelVote);
+              }
+            }
+            votes = levels.length;
+            if (votes >= needed) {
+              const avg = levels.reduce((a, b) => a + b, 0) / votes;
+              const r = { level: Math.min(5, Math.max(1, Math.round(avg))), votes, avg: Math.round(avg * 10) / 10, at: Date.now() };
+              try { await updateDoc(doc(fb.db, 'squads', code, 'workouts', d.id), { ranked: r }); ranked = r; } catch (e) { console.warn('rank failed', e); }
+            }
+          }
+          out.push({ ...w, declaredLvl: w.lvl, lvl: ranked ? ranked.level : w.lvl, id: sqId, docId: d.id, squad: code, squadName: lb.cache[code]?.name || code,
+            sharedFrom: data.srcId, byUid: data.by, byName: data.byName, custom: false, squadShared: true, ranked, votes: ranked ? ranked.votes : votes, needed });
         } catch (e) { console.warn('bad shared workout', d.id, e); }
-      });
+      }
     } catch (e) { console.warn('squad workouts', code, e); }
   }
   S.setSquadWorkouts(out);
+  const paid = S.applyBackpay();
+  if (paid) hooks.toast(`+${paid} XP back-paid: a squad workout was ranked!`);
+}
+
+function rankLine(w) {
+  if (w.ranked) return `<b>Squad-ranked: level ${w.ranked.level}</b> (average ${w.ranked.avg ?? w.ranked.level} from ${w.ranked.votes} votes).`;
+  return `<b>Unranked:</b> ${w.votes || 0} of ${w.needed || 5} votes so far. Earns level-1 XP until ranked; everyone gets back-paid once it is.`;
 }
 
 export function shareControls(w) {
   if (w.squadShared) {
     const mine = user && w.byUid === user.uid;
-    return `<div class="info">Shared by <b>${h(w.byName || 'a squad mate')}</b> in <b>${h(w.squadName)}</b>.
+    return `<div class="info">Shared by <b>${h(w.byName || 'a squad mate')}</b> in <b>${h(w.squadName)}</b>.<br>${rankLine(w)}
       <div class="row"><button class="btn ghost" data-act="sqcopy" data-id="${h(w.id)}">Save a copy to my workouts</button>
       ${mine ? `<button class="btn ghost danger" data-act="squnshare" data-code="${h(w.squad)}" data-doc="${h(w.docId)}">Remove from squad</button>` : ''}</div></div>`;
   }
   if (!w.custom) return '';
+  const lvlNote = '<p class="muted small">Your own workouts earn level-1 XP. Share one with your squad: once 5 members (or everyone, in smaller squads) have done it and voted on its level, it gets that level and earlier sessions are back-paid.</p>';
   const codes = S.get().squads || [];
-  if (!user) return '<div class="info">Sign in and join a squad to share this workout with your friends.</div>';
-  if (!codes.length) return '<div class="info">Join or create a squad (Me → Squads) to share this workout.</div>';
+  if (!user) return `<div class="info">Sign in and join a squad to share this workout with your friends.${lvlNote}</div>`;
+  if (!codes.length) return `<div class="info">Join or create a squad (Me → Squads) to share this workout.${lvlNote}</div>`;
   const shared = S.getSquadWorkouts().filter((x) => x.sharedFrom === w.id && x.byUid === user.uid);
   return `<div class="card"><div class="card-h">Share with your squad</div>${codes.map((c) => {
     const ex = shared.find((x) => x.squad === c);
     const name = h(lb.cache[c]?.name || 'Squad ' + c);
     return ex
-      ? `<div class="row"><span>✓ Shared with ${name}</span><button class="btn ghost" data-act="sqshare" data-code="${h(c)}" data-id="${h(w.id)}">Update</button><button class="btn ghost danger" data-act="squnshare" data-code="${h(c)}" data-doc="${h(ex.docId)}">Unshare</button></div>`
+      ? `<div class="sharerow"><div>✓ Shared with ${name}</div><div class="muted small">${rankLine(ex)}</div><div class="row">${ex.ranked ? '' : `<button class="btn ghost" data-act="sqshare" data-code="${h(c)}" data-id="${h(w.id)}">Update</button>`}<button class="btn ghost danger" data-act="squnshare" data-code="${h(c)}" data-doc="${h(ex.docId)}">Unshare</button></div></div>`
       : `<button class="btn" data-act="sqshare" data-code="${h(c)}" data-id="${h(w.id)}">Share with ${name}</button>`;
-  }).join('')}</div>`;
+  }).join('')}${lvlNote}</div>`;
 }
 
 // ---------- squads ----------
@@ -306,7 +340,7 @@ export async function handle(act, el) {
       delete clean.custom;
       await fb.setDoc(fb.doc(fb.db, 'squads', el.dataset.code, 'workouts', `${user.uid}_${w.id}`), {
         workout: JSON.stringify(clean), by: user.uid, byName: S.get().profile.name || user.displayName || 'Squad mate', srcId: w.id, name: w.name, createdAt: Date.now(),
-      });
+      }, { merge: true });
       await fetchSquadWorkouts(true);
       toast('Shared with the squad');
       rerender();

@@ -299,3 +299,5 @@ textarea { resize: vertical; }
 .lb-name { flex: 1; font-weight: 800; display: flex; flex-direction: column; }
 .lb-name small { font-weight: 400; }
 .lb-score { font-family: var(--display); font-size: 30px; color: var(--yellow); }
+
+.sharerow { padding: 8px 0; border-bottom: 1px dashed var(--line); }
