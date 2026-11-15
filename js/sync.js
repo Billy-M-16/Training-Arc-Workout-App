@@ -96,6 +96,7 @@ async function startSync() {
       S.update((s) => { s.profile.name = user.displayName.split(' ')[0]; }, { silent: true });
     }
     await push();
+    fetchSquadWorkouts(true);
     hooks.toast('Synced');
   } catch (e) { console.warn('initial sync failed', e); hooks.toast('Sync failed: ' + (e.code || e.message)); }
   unsubDoc = onSnapshot(ref, (snap) => {
@@ -149,6 +150,51 @@ async function push() {
   await setDoc(doc(fb.db, 'users', user.uid), { state: JSON.stringify(st), updatedAt: now, name: st.profile.name || '' });
   const sum = memberSummary(st);
   await Promise.all((st.squads || []).map((code) => setDoc(doc(fb.db, 'squads', code, 'members', user.uid), sum).catch((e) => console.warn('squad push', code, e))));
+}
+
+// ---------- squad workouts ----------
+let lastFetch = 0;
+export async function fetchSquadWorkouts(force = false) {
+  if (!user || !fb) return;
+  if (!force && Date.now() - lastFetch < 120000) return;
+  lastFetch = Date.now();
+  const { collection, getDocs, doc, getDoc } = fb;
+  const out = [];
+  for (const code of S.get().squads || []) {
+    try {
+      if (!lb.cache[code]) { const sq = await getDoc(doc(fb.db, 'squads', code)); if (sq.exists()) lb.cache[code] = { name: sq.data().name }; }
+      const snap = await getDocs(collection(fb.db, 'squads', code, 'workouts'));
+      snap.forEach((d) => {
+        try {
+          const data = d.data();
+          const w = JSON.parse(data.workout);
+          out.push({ ...w, id: `sq-${code}-${d.id}`, docId: d.id, squad: code, squadName: lb.cache[code]?.name || code, sharedFrom: data.srcId, byUid: data.by, byName: data.byName, custom: false, squadShared: true });
+        } catch (e) { console.warn('bad shared workout', d.id, e); }
+      });
+    } catch (e) { console.warn('squad workouts', code, e); }
+  }
+  S.setSquadWorkouts(out);
+}
+
+export function shareControls(w) {
+  if (w.squadShared) {
+    const mine = user && w.byUid === user.uid;
+    return `<div class="info">Shared by <b>${h(w.byName || 'a squad mate')}</b> in <b>${h(w.squadName)}</b>.
+      <div class="row"><button class="btn ghost" data-act="sqcopy" data-id="${h(w.id)}">Save a copy to my workouts</button>
+      ${mine ? `<button class="btn ghost danger" data-act="squnshare" data-code="${h(w.squad)}" data-doc="${h(w.docId)}">Remove from squad</button>` : ''}</div></div>`;
+  }
+  if (!w.custom) return '';
+  const codes = S.get().squads || [];
+  if (!user) return '<div class="info">Sign in and join a squad to share this workout with your friends.</div>';
+  if (!codes.length) return '<div class="info">Join or create a squad (Me → Squads) to share this workout.</div>';
+  const shared = S.getSquadWorkouts().filter((x) => x.sharedFrom === w.id && x.byUid === user.uid);
+  return `<div class="card"><div class="card-h">Share with your squad</div>${codes.map((c) => {
+    const ex = shared.find((x) => x.squad === c);
+    const name = h(lb.cache[c]?.name || 'Squad ' + c);
+    return ex
+      ? `<div class="row"><span>✓ Shared with ${name}</span><button class="btn ghost" data-act="sqshare" data-code="${h(c)}" data-id="${h(w.id)}">Update</button><button class="btn ghost danger" data-act="squnshare" data-code="${h(c)}" data-doc="${h(ex.docId)}">Unshare</button></div>`
+      : `<button class="btn" data-act="sqshare" data-code="${h(c)}" data-id="${h(w.id)}">Share with ${name}</button>`;
+  }).join('')}</div>`;
 }
 
 // ---------- squads ----------
@@ -241,6 +287,7 @@ export async function handle(act, el) {
       S.update((s) => { s.squads = [...new Set([...(s.squads || []), code])]; s.deleted = (s.deleted || []).filter((x) => x !== 'squad:' + code); });
       await push();
       lb.cache[code] = { name: sq.data().name };
+      fetchSquadWorkouts(true);
       toast(`Joined ${sq.data().name}!`);
       location.hash = '#/squad/' + code;
     }
@@ -249,7 +296,36 @@ export async function handle(act, el) {
       if (!confirm('Leave this squad?')) return;
       await fb.deleteDoc(fb.doc(fb.db, 'squads', code, 'members', user.uid)).catch(() => {});
       S.update((s) => { s.squads = (s.squads || []).filter((c) => c !== code); s.deleted = [...(s.deleted || []), 'squad:' + code]; });
+      S.setSquadWorkouts(S.getSquadWorkouts().filter((w) => w.squad !== code));
       location.hash = '#/me';
+    }
+    if (act === 'sqshare') {
+      const w = S.get().custom.find((x) => x.id === el.dataset.id);
+      if (!w) return;
+      const clean = { ...w };
+      delete clean.custom;
+      await fb.setDoc(fb.doc(fb.db, 'squads', el.dataset.code, 'workouts', `${user.uid}_${w.id}`), {
+        workout: JSON.stringify(clean), by: user.uid, byName: S.get().profile.name || user.displayName || 'Squad mate', srcId: w.id, name: w.name, createdAt: Date.now(),
+      });
+      await fetchSquadWorkouts(true);
+      toast('Shared with the squad');
+      rerender();
+    }
+    if (act === 'squnshare') {
+      if (!confirm('Remove this workout from the squad?')) return;
+      await fb.deleteDoc(fb.doc(fb.db, 'squads', el.dataset.code, 'workouts', el.dataset.doc));
+      await fetchSquadWorkouts(true);
+      toast('Removed');
+      if (location.hash.includes('/w/sq-')) location.hash = '#/library'; else rerender();
+    }
+    if (act === 'sqcopy') {
+      const w = S.allWorkouts().find((x) => x.id === el.dataset.id);
+      if (!w) return;
+      const copy = { ...w, id: 'c' + Date.now(), custom: true, squadShared: false, desc: (w.desc || '') + ` (from ${w.byName || 'squad'})` };
+      ['docId', 'squad', 'squadName', 'sharedFrom', 'byUid', 'byName'].forEach((k) => delete copy[k]);
+      S.update((st) => { st.custom.push(copy); });
+      toast('Saved to your workouts');
+      location.hash = '#/w/' + copy.id;
     }
     if (act === 'lbtab') { lb.tab = el.dataset.v; rerender(); }
     if (act === 'sharecode') {

@@ -40,7 +40,7 @@ function workoutCard(w, extra = '') {
   const m = workoutMeta(a.workout);
   const r = S.avgRating(w.id);
   return `<a class="wcard ${a.blocked ? 'blocked' : ''}" href="#/w/${encodeURIComponent(w.id)}">
-    <div class="wcard-top"><span class="cat cat-${w.cat[0]}">${h(SLOT_NAMES[w.cat[0]])}</span>${w.bench ? '<span class="tag boss">Boss</span>' : ''}${w.custom ? '<span class="tag">Yours</span>' : ''}${r ? `<span class="tag star">★ ${r.toFixed(1)}</span>` : ''}</div>
+    <div class="wcard-top"><span class="cat cat-${w.cat[0]}">${h(SLOT_NAMES[w.cat[0]])}</span>${w.bench ? '<span class="tag boss">Boss</span>' : ''}${w.custom ? '<span class="tag">Yours</span>' : ''}${w.squadShared ? `<span class="tag sq">Squad · ${h(w.byName || '')}</span>` : ''}${r ? `<span class="tag star">★ ${r.toFixed(1)}</span>` : ''}</div>
     <div class="wcard-name">${h(w.name)}</div>
     <div class="wcard-meta">${durLabel(w)} · ${h(eqLabel(m.eq))} · ${h(w.fmt || '')}</div>
     <div class="wcard-foot">${lvlPips(w.lvl)}${m.quiet ? '<span class="tag q">Quiet</span>' : ''}${m.backFriendly ? '<span class="tag b">Back-friendly</span>' : ''}${a.swaps.length ? `<span class="tag sw">${a.swaps.length} swap${a.swaps.length > 1 ? 's' : ''}</span>` : ''}${a.blocked ? `<span class="tag no">${a.missing.length ? 'Needs ' + h(eqLabel(a.missing)) : 'Not possible right now'}</span>` : ''}</div>
@@ -147,7 +147,7 @@ views.home = () => {
 };
 
 // ---------- library ----------
-const LF = { q: '', cat: '', eq: '', len: '', lvl: '', quiet: false, back: false, bench: false, all: false };
+const LF = { q: '', cat: '', eq: '', len: '', lvl: '', quiet: false, back: false, bench: false, squad: false, all: false };
 views.library = () => {
   const c = S.ctx();
   const st = S.get();
@@ -161,6 +161,7 @@ views.library = () => {
   if (LF.quiet) list = list.filter(({ a }) => workoutMeta(a.workout).quiet);
   if (LF.back) list = list.filter(({ a }) => workoutMeta(a.workout).backFriendly);
   if (LF.bench) list = list.filter(({ w }) => w.bench);
+  if (LF.squad) list = list.filter(({ w }) => w.squadShared || w.custom);
   list.sort((x, y) => (x.a.blocked - y.a.blocked) || S.scoreWorkout(y.w) - S.scoreWorkout(x.w));
   const owned = ['none', ...st.settings.owned.filter((q) => q !== 'run')];
   const chip = (key, val, label) => `<button class="chip ${LF[key] === val ? 'on' : ''}" data-act="lf" data-k="${key}" data-v="${val}">${h(label)}</button>`;
@@ -172,7 +173,7 @@ views.library = () => {
     <div class="chips scroll">${chip('eq', '', 'Any kit')}${owned.map((q) => chip('eq', q, q === 'none' ? 'Bodyweight only' : EQUIPMENT[q].name)).join('')}</div>
     <div class="chips scroll">${chip('len', '', 'Any length')}${chip('len', '10-20', '≤20 min')}${chip('len', '25-35', '25–35 min')}${chip('len', '40-45', '40–45 min')}
       ${chip('lvl', '', 'Any level')}${chip('lvl', '1-2', 'Easy')}${chip('lvl', '3-3', 'Solid')}${chip('lvl', '4-5', 'Hard')}</div>
-    <div class="chips scroll">${tog('quiet', 'Quiet')}${tog('back', 'Back-friendly')}${tog('bench', 'Boss fights')}${tog('all', 'Show locked')}</div>
+    <div class="chips scroll">${tog('quiet', 'Quiet')}${tog('back', 'Back-friendly')}${tog('squad', 'Squad workouts')}${tog('bench', 'Boss fights')}${tog('all', 'Show locked')}</div>
     <div class="muted small">${list.length} workouts</div>
     <div class="wlist">${list.map(({ w }) => workoutCard(w)).join('') || '<p class="muted">Nothing matches. Loosen a filter or add equipment in settings.</p>'}</div>`;
 };
@@ -219,6 +220,7 @@ views.workout = (id, params) => {
     <details class="card"><summary>Exercise demos and cues</summary>
       ${allExerciseIds(a.workout).map((x) => `<div class="exinfo"><b>${h(EXERCISES[x].name)}</b><span>${h(EXERCISES[x].cue)}</span><a href="${ytSearch(EXERCISES[x].name)}" target="_blank" rel="noopener">Video ↗</a></div>`).join('')}
     </details>
+    ${Sync.shareControls(w)}
     ${w.custom ? `<button class="btn ghost danger" data-act="delcustom" data-id="${h(w.id)}">Delete this workout</button>` : ''}`;
 };
 
@@ -505,7 +507,10 @@ function render() {
   document.querySelectorAll('.nav a').forEach((a) => a.classList.toggle('on', a.dataset.tab === r.tab));
 }
 
-window.addEventListener('hashchange', () => { render(); window.scrollTo(0, 0); });
+window.addEventListener('hashchange', () => {
+  render(); window.scrollTo(0, 0);
+  if (/^#\/(library|home)/.test(location.hash)) Sync.fetchSquadWorkouts();
+});
 window.addEventListener('voices-ready', () => { if (route().view === 'settings') render(); });
 S.subscribe(() => { if ($player.hidden) render(); });
 

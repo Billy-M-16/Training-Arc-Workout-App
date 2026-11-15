@@ -171,6 +171,7 @@ textarea { resize: vertical; }
 .cat-core { background: var(--yellow); } .cat-mobility { background: var(--green); } .cat-cardio { background: var(--purple); color: #fff; } .cat-recovery { background: var(--green); }
 .tag { font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 6px; background: var(--bg2); border: 1px solid var(--line); }
 .tag.boss { background: var(--yellow); color: #1a0d1f; border-color: #000; }
+.tag.sq { background: var(--purple); color: #fff; border-color: #000; }
 .tag.q { color: var(--cyan); } .tag.b { color: var(--green); } .tag.sw { color: var(--yellow); } .tag.no { color: var(--hot); } .tag.star { color: var(--yellow); }
 .pips { display: inline-flex; gap: 3px; vertical-align: middle; }
 .pips i { width: 10px; height: 10px; transform: skew(-12deg); background: var(--bg2); border: 1px solid var(--line); }

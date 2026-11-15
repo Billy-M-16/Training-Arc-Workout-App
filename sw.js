@@ -1,5 +1,5 @@
 // Offline support: network first (so updates arrive straight away), cache as fallback.
-const CACHE = 'training-arc-v3';
+const CACHE = 'training-arc-v4';
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest', 'css/styles.css', 'icons/icon.svg', 'icons/icon-192.png',
   'js/app.js', 'js/store.js', 'js/engine.js', 'js/program.js', 'js/player.js', 'js/audio.js', 'js/sync.js', 'js/firebase-config.js',

@@ -79,7 +79,23 @@ export function addDays(iso, n) {
 }
 export const dayIndex = (iso) => (new Date(iso + 'T12:00:00').getDay() + 6) % 7; // Mon=0
 
-export function allWorkouts() { return [...WORKOUTS, ...state.custom]; }
+// Workouts shared by squad mates (cached per device, refreshed by sync)
+const SQW_KEY = 'training-arc-squad-workouts';
+let squadWorkouts = [];
+try { squadWorkouts = JSON.parse(localStorage.getItem(SQW_KEY) || '[]'); } catch { squadWorkouts = []; }
+export function setSquadWorkouts(list) {
+  squadWorkouts = list;
+  try { localStorage.setItem(SQW_KEY, JSON.stringify(list)); } catch { /* full */ }
+  listeners.forEach((l) => l(state));
+}
+export function getSquadWorkouts() { return squadWorkouts; }
+
+export function allWorkouts() {
+  const mine = new Set(state.custom.map((w) => w.id));
+  const shared = squadWorkouts.filter((w) => !mine.has(w.sharedFrom) && (state.squads || []).includes(w.squad));
+  const seen = new Set();
+  return [...WORKOUTS, ...state.custom, ...shared.filter((w) => (seen.has(w.id) ? false : seen.add(w.id)))];
+}
 export function workoutById(id) { return allWorkouts().find((w) => w.id === id); }
 export function ctx() { return makeContext(state.settings, state.injuries); }
 
