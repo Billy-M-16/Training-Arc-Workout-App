@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#14122b">
+  <meta name="description" content="Home workouts, training arcs and squad leaderboards.">
+  <title>Training Arc</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a href="#/home" class="logo"><span>TRAINING</span><b>ARC</b></a>
+  </header>
+  <main id="app" class="app"></main>
+  <nav class="nav">
+    <a href="#/home" data-tab="home"><i>⚡</i><span>Home</span></a>
+    <a href="#/library" data-tab="library"><i>📚</i><span>Library</span></a>
+    <a href="#/arc" data-tab="arc"><i>⚔️</i><span>Arc</span></a>
+    <a href="#/me" data-tab="me"><i>👤</i><span>Me</span></a>
+  </nav>
+  <section id="player" hidden></section>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
