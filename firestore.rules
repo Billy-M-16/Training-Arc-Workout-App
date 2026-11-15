@@ -2,51 +2,99 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function signedIn() { return request.auth != null; }
+    function squad(code) { return get(/databases/$(database)/documents/squads/$(code)).data; }
+    // A member is someone a moderator has accepted.
     function isMember(code) {
-      return request.auth != null
-        && exists(/databases/$(database)/documents/squads/$(code)/members/$(request.auth.uid));
+      return signedIn() && exists(/databases/$(database)/documents/squads/$(code)/approved/$(request.auth.uid));
+    }
+    // Moderators: the squad owner plus anyone the owner has made a mod.
+    function isMod(code) {
+      return signedIn() && (squad(code).owner == request.auth.uid || request.auth.uid in squad(code).get('mods', []));
     }
 
     // Each person's own data: only they can read or write it.
     match /users/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read, write: if signedIn() && request.auth.uid == uid;
     }
 
-    // Squads: anyone signed in can look up a squad by its invite code (to join it).
-    // Only the creator can rename or delete it.
     match /squads/{code} {
-      allow get: if request.auth != null;
+      allow get: if signedIn();
       allow list: if false;
-      allow create: if request.auth != null
+      allow create: if signedIn()
         && request.resource.data.owner == request.auth.uid
         && request.resource.data.name is string
         && request.resource.data.name.size() <= 40;
-      allow update, delete: if request.auth != null && resource.data.owner == request.auth.uid;
+      // only the owner changes the name, moderators list and settings
+      allow update: if signedIn() && resource.data.owner == request.auth.uid
+        && request.resource.data.owner == resource.data.owner;
+      allow delete: if signedIn() && resource.data.owner == request.auth.uid;
 
-      // Workouts shared with the squad: members can read; you can share and remove your own;
-      // the squad creator can remove any.
-      match /workouts/{wid} {
+      // Accepted members. Moderators accept and remove; you can remove yourself (leave).
+      match /approved/{uid} {
+        allow read: if isMember(code) || (signedIn() && request.auth.uid == uid);
+        allow create, update: if isMod(code);
+        allow delete: if isMod(code) || (signedIn() && request.auth.uid == uid);
+      }
+
+      // Join requests: you can ask (unless blocked); moderators review.
+      match /requests/{uid} {
+        allow read: if isMod(code) || (signedIn() && request.auth.uid == uid);
+        allow create: if signedIn() && request.auth.uid == uid
+          && !exists(/databases/$(database)/documents/squads/$(code)/banned/$(uid));
+        allow delete: if isMod(code) || (signedIn() && request.auth.uid == uid);
+      }
+
+      // Blocked people can't ask to join again.
+      match /banned/{uid} {
+        allow read: if isMod(code) || (signedIn() && request.auth.uid == uid);
+        allow write: if isMod(code);
+      }
+
+      // Leaderboard entries: write your own while you're a member; moderators can remove.
+      match /members/{uid} {
         allow read: if isMember(code);
-        // share your own workout (the squad level can't be set by the creator)
+        allow create, update: if signedIn() && request.auth.uid == uid && isMember(code);
+        allow delete: if (signedIn() && request.auth.uid == uid) || isMod(code);
+      }
+
+      // Reports go to the moderators.
+      match /reports/{rid} {
+        allow create: if isMember(code) && request.resource.data.by == request.auth.uid;
+        allow read, delete: if isMod(code);
+      }
+
+      // Shared workouts. Members see approved ones and their own; moderators see everything.
+      match /workouts/{wid} {
+        allow read: if isMember(code)
+          && (resource.data.status == 'approved' || resource.data.by == request.auth.uid || isMod(code));
         allow create: if isMember(code)
           && request.resource.data.by == request.auth.uid
           && request.resource.data.workout is string
           && request.resource.data.workout.size() < 100000
-          && !('ranked' in request.resource.data);
+          && !('ranked' in request.resource.data)
+          && (request.resource.data.status == 'pending'
+              || (request.resource.data.status == 'approved'
+                  && (isMod(code) || squad(code).get('approveWorkouts', true) == false)));
+        // the creator can update their own workout, but not its approval or ranking
         allow update: if isMember(code)
           && resource.data.by == request.auth.uid
           && request.resource.data.by == request.auth.uid
-          && request.resource.data.get('ranked', null) == resource.data.get('ranked', null);
+          && request.resource.data.get('ranked', null) == resource.data.get('ranked', null)
+          && request.resource.data.get('status', null) == resource.data.get('status', null);
+        // moderators approve
+        allow update: if isMod(code)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+          && request.resource.data.status == 'approved';
         // any member can lock in the squad ranking once, and only that field
         allow update: if isMember(code)
+          && resource.data.status == 'approved'
           && resource.data.get('ranked', null) == null
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ranked'])
           && request.resource.data.ranked.level is int
           && request.resource.data.ranked.level >= 1
           && request.resource.data.ranked.level <= 5;
-        allow delete: if request.auth != null
-          && (resource.data.by == request.auth.uid
-              || get(/databases/$(database)/documents/squads/$(code)).data.owner == request.auth.uid);
+        allow delete: if (signedIn() && resource.data.by == request.auth.uid) || isMod(code);
 
         // one level vote per member
         match /votes/{uid} {
@@ -55,14 +103,6 @@ service cloud.firestore {
             && request.resource.data.level is int
             && request.resource.data.level >= 1 && request.resource.data.level <= 5;
         }
-      }
-
-      // Leaderboard entries: you can only write your own; only squad members can read them.
-      match /members/{uid} {
-        allow write: if request.auth != null && request.auth.uid == uid
-          && exists(/databases/$(database)/documents/squads/$(code));
-        allow read: if request.auth != null
-          && exists(/databases/$(database)/documents/squads/$(code)/members/$(request.auth.uid));
       }
     }
   }

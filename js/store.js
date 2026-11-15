@@ -22,6 +22,7 @@ const DEFAULT = {
   checkins: {},     // weekKey -> { days:{0..6:min}, back, energy, date }
   custom: [],       // custom workouts
   squads: [],       // squad invite codes
+  squadRequests: [], // squads I've asked to join
   deleted: [],      // ids deleted on this device (so sync doesn't bring them back)
   updatedAt: 0,
 };
@@ -133,11 +134,11 @@ export function applyBackpay() {
 
 export function allWorkouts() {
   const mine = new Set(state.custom.map((w) => w.id));
-  const shared = squadWorkouts.filter((w) => !mine.has(w.sharedFrom) && (state.squads || []).includes(w.squad));
+  const shared = squadWorkouts.filter((w) => w.status !== 'pending' && !mine.has(w.sharedFrom) && (state.squads || []).includes(w.squad));
   const seen = new Set();
   return [...WORKOUTS, ...state.custom, ...shared.filter((w) => (seen.has(w.id) ? false : seen.add(w.id)))];
 }
-export function workoutById(id) { return allWorkouts().find((w) => w.id === id); }
+export function workoutById(id) { return allWorkouts().find((w) => w.id === id) || squadWorkouts.find((w) => w.id === id); }
 export function ctx() { return makeContext(state.settings, state.injuries); }
 
 export function xpTotal() { return state.history.reduce((a, h) => a + (h.points || 0), 0); }

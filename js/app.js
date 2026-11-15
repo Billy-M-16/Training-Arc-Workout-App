@@ -510,7 +510,7 @@ function render() {
 
 window.addEventListener('hashchange', () => {
   render(); window.scrollTo(0, 0);
-  if (/^#\/(library|home)/.test(location.hash)) Sync.fetchSquadWorkouts();
+  if (/^#\/(library|home|me|squad)/.test(location.hash)) Sync.fetchSquadWorkouts();
 });
 window.addEventListener('voices-ready', () => { if (route().view === 'settings') render(); });
 S.subscribe(() => { if ($player.hidden) render(); });

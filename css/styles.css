@@ -301,3 +301,9 @@ textarea { resize: vertical; }
 .lb-score { font-family: var(--display); font-size: 30px; color: var(--yellow); }
 
 .sharerow { padding: 8px 0; border-bottom: 1px dashed var(--line); }
+
+.member-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; padding: 8px 0; border-bottom: 1px dashed var(--line); }
+.member-row > span:first-child { font-weight: 700; display: flex; flex-direction: column; }
+.member-row .row { margin: 0; gap: 6px; }
+.chip.danger { color: var(--hot); border-color: var(--hot); }
+.modpanel { border-color: var(--yellow); }
