@@ -8,7 +8,7 @@ import {
   INJURY_REGIONS, INJURY_LEVELS, parseEntry, allExerciseIds,
 } from './engine.js';
 import { startPlayer } from './player.js';
-import { unlockAudio } from './audio.js';
+import { unlockAudio, englishVoices, setVoice, say } from './audio.js';
 import * as Sync from './sync.js';
 
 const $app = document.getElementById('app');
@@ -375,7 +375,9 @@ views.settings = () => {
       ${tog('quiet', 'Quiet mode (no jumping, slamming or throwing)')}
       ${tog('voice', 'Voice cues')}${tog('beeps', 'Countdown beeps')}${tog('vibrate', 'Vibrate')}
       ${tog('tvMode', 'TV mode (giant timer for a big screen)')}
-      <button class="btn ghost" data-act="testaudio">Test sound</button></div>
+      ${(() => { const vs = englishVoices(); return vs.length ? `<label class="w-row"><span>Voice</span><select data-input="voice" style="width:190px"><option value="">Automatic</option>${vs.map((v) => `<option value="${h(v.name)}" ${se.voiceName === v.name ? 'selected' : ''}>${h(v.name)} (${h(v.lang)})</option>`).join('')}</select></label>` : '<p class="muted small">No voices found on this device yet. See the tip below.</p>'; })()}
+      <div class="row"><button class="btn ghost" data-act="testaudio">Test beeps</button><button class="btn ghost" data-act="testvoice">Test voice</button></div>
+      <details><summary class="muted small">Voice not working?</summary><p class="muted small">Make sure media volume is up. On Samsung phones go to <b>Settings → General management → Text-to-speech</b>, set the preferred engine to <b>Speech Services by Google</b>, and tap the cog to install English voice data. Then fully close and reopen the app.</p></details></div>
     <div class="card"><div class="card-h">Cloud sync</div><p class="muted small">${Sync.status()}</p>${Sync.controls()}</div>
     <div class="card"><div class="card-h">Your data</div>
       <div class="row"><button class="btn ghost" data-act="export">Export backup</button><label class="btn ghost">Import backup<input type="file" accept="application/json" data-input="import" hidden></label></div>
@@ -502,6 +504,7 @@ function render() {
 }
 
 window.addEventListener('hashchange', () => { render(); window.scrollTo(0, 0); });
+window.addEventListener('voices-ready', () => { if (route().view === 'settings') render(); });
 S.subscribe(() => { if ($player.hidden) render(); });
 
 // ================= EVENTS =================
@@ -523,7 +526,8 @@ document.addEventListener('click', (e) => {
     case 'start': startWorkout(el.dataset.id, el.dataset.planned === '1'); break;
     case 'delcustom': if (confirm('Delete this workout?')) { S.update((x) => { x.custom = x.custom.filter((w) => w.id !== el.dataset.id); x.deleted = [...(x.deleted || []), el.dataset.id]; }); location.hash = '#/library'; } break;
     case 'own': S.update((x) => { const q = el.dataset.q; x.settings.owned = x.settings.owned.includes(q) ? x.settings.owned.filter((y) => y !== q) : [...x.settings.owned, q]; }); break;
-    case 'testaudio': unlockAudio(); import('./audio.js').then((A) => { A.tick(); setTimeout(A.go, 400); setTimeout(() => A.say('Ten seconds. Let us go.'), 900); }); break;
+    case 'testaudio': unlockAudio(); import('./audio.js').then((A) => { A.tick(); setTimeout(A.tick, 500); setTimeout(A.go, 1000); }); break;
+    case 'testvoice': unlockAudio(); say('Round three. Ten kettlebell swings. Let us go.', true); break;
     case 'export': {
       const blob = new Blob([S.exportData()], { type: 'application/json' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `training-arc-backup-${S.todayISO()}.json`; a.click();
@@ -569,6 +573,7 @@ document.addEventListener('change', (e) => {
   if (!el) return;
   const k = el.dataset.input;
   if (k === 'name') S.update((x) => { x.profile.name = el.value.trim(); if (!x.profile.createdAt) x.profile.createdAt = new Date().toISOString(); });
+  if (k === 'voice') { S.update((x) => { x.settings.voiceName = el.value; }); setVoice(); say('This is my voice.', true); }
   if (k === 'defmin') S.update((x) => { x.settings.defaultMin = Number(el.value); });
   if (k === 'blvl') B.lvl = Number(el.value);
   if (k === 'bexadd' && el.value) { B.ex.push({ id: el.value, qty: null }); render(); }

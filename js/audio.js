@@ -8,11 +8,7 @@ export function unlockAudio() {
     if (ac.state === 'suspended') ac.resume();
   } catch (e) { /* no audio */ }
   // warm up speech on a user gesture (needed on some Android builds)
-  if ('speechSynthesis' in window && S.get().settings.voice) {
-    const u = new SpeechSynthesisUtterance(' ');
-    u.volume = 0;
-    speechSynthesis.speak(u);
-  }
+  if ('speechSynthesis' in window) { speechSynthesis.getVoices(); speechSynthesis.resume(); }
 }
 
 export function beep(freq = 880, dur = 0.12, vol = 0.35) {
@@ -30,14 +26,44 @@ export const tick = () => beep(880, 0.1);
 export const go = () => { beep(1320, 0.35, 0.4); buzz([120]); };
 export const done = () => { beep(990, 0.15); setTimeout(() => beep(1320, 0.15), 170); setTimeout(() => beep(1760, 0.3), 340); buzz([80, 60, 80]); };
 
-export function say(text) {
-  if (!S.get().settings.voice || !('speechSynthesis' in window)) return;
+// ---------- voice ----------
+let voice = null;
+const keep = []; // hold utterances so Chrome doesn't garbage-collect them mid-sentence
+export function englishVoices() {
+  if (!('speechSynthesis' in window)) return [];
+  return speechSynthesis.getVoices().filter((v) => /^en/i.test(v.lang));
+}
+function pickVoice() {
+  const vs = englishVoices();
+  const pref = S.get().settings.voiceName;
+  const by = (re) => vs.find((v) => re.test(v.lang.replace('_', '-')));
+  voice = vs.find((v) => v.name === pref) || by(/en-NZ/i) || by(/en-AU/i) || by(/en-GB/i) || by(/en-US/i) || vs[0] || null;
+}
+if ('speechSynthesis' in window) {
+  pickVoice();
+  speechSynthesis.addEventListener?.('voiceschanged', () => { pickVoice(); window.dispatchEvent(new Event('voices-ready')); });
+}
+export function setVoice() { pickVoice(); }
+
+function speakNow(text) {
+  const u = new SpeechSynthesisUtterance(text);
+  if (voice) { u.voice = voice; u.lang = voice.lang; }
+  u.rate = 1.05;
+  u.volume = 1;
+  keep.push(u);
+  if (keep.length > 5) keep.shift();
+  speechSynthesis.resume();
+  speechSynthesis.speak(u);
+}
+export function say(text, force = false) {
+  if ((!S.get().settings.voice && !force) || !('speechSynthesis' in window)) return;
   try {
-    speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.rate = 1.05;
-    u.lang = 'en-GB';
-    speechSynthesis.speak(u);
+    if (!voice) pickVoice();
+    // Chrome on Android drops a sentence spoken straight after cancel(), so pause briefly.
+    if (speechSynthesis.speaking || speechSynthesis.pending) {
+      speechSynthesis.cancel();
+      setTimeout(() => speakNow(text), 150);
+    } else speakNow(text);
   } catch (e) { /* ignore */ }
 }
 
