@@ -93,6 +93,8 @@ export const session = { uid: null };
 
 // Added workouts earn level-1 XP until the squad ranks them.
 export function rankedLevelFor(wid) {
+  const own = state.custom.find((w) => w.id === wid);
+  if (own && own.rankedLevel) return own.rankedLevel;
   for (const w of squadWorkouts) {
     if (!w.ranked) continue;
     if (w.id === wid) return w.ranked.level;

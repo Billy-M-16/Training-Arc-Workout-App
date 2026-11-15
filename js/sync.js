@@ -200,6 +200,16 @@ export async function fetchSquadWorkouts(force = false) {
     } catch (e) { console.warn('squad workouts', code, e); }
   }
   S.setSquadWorkouts(out);
+  // Keep a ranked level on my own copy, so it stays ranked even if I leave the squad
+  const toLock = me.custom.filter((c) => !c.rankedLevel && out.some((x) => x.ranked && x.sharedFrom === c.id && x.byUid === user.uid));
+  if (toLock.length) {
+    S.update((st) => {
+      for (const c of st.custom) {
+        const r = out.find((x) => x.ranked && x.sharedFrom === c.id && x.byUid === user.uid);
+        if (r && !c.rankedLevel) { c.rankedLevel = r.ranked.level; c.lvl = r.ranked.level; }
+      }
+    });
+  }
   const paid = S.applyBackpay();
   if (paid) hooks.toast(`+${paid} XP back-paid: a squad workout was ranked!`);
 }
@@ -245,7 +255,7 @@ export function squadsCard() {
   if (!ready) return `<p class="muted small">${status()}</p>`;
   if (!user) return `<p class="muted small">Sign in to create or join a squad with your friends.</p><button class="btn" data-act="signin">Sign in with Google</button>`;
   const list = (st.squads || []).map((c) => `<a class="btn ghost wide" href="#/squad/${c}">⚔️ ${h(lb.cache[c]?.name || 'Squad ' + c)}</a>`).join('');
-  return `${list || '<p class="muted small">No squad yet. Create one and share the code, or join a friend\'s.</p>'}
+  return `${list ? list + '<p class="muted small">Tap a squad to see its leaderboard, invite code, or to leave it.</p>' : ''}${list ? '' : '<p class="muted small">No squad yet. Create one and share the code, or join a friend\'s.</p>'}
     <div class="row"><input type="text" id="sq-name" placeholder="Squad name" maxlength="30"><button class="btn" data-act="squadcreate">Create</button></div>
     <div class="row"><input type="text" id="sq-code" placeholder="Invite code" maxlength="6" style="text-transform:uppercase"><button class="btn ghost" data-act="squadjoin">Join</button></div>`;
 }
@@ -327,7 +337,11 @@ export async function handle(act, el) {
     }
     if (act === 'squadleave') {
       const code = el.dataset.code;
-      if (!confirm('Leave this squad?')) return;
+      if (!confirm('Leave this squad? You will drop off its leaderboard and stop seeing its shared workouts. Your own workouts, history and XP stay with you.')) return;
+      const mineShared = S.getSquadWorkouts().filter((w) => w.squad === code && w.byUid === user.uid);
+      if (mineShared.length && confirm(`Also remove the ${mineShared.length} workout${mineShared.length > 1 ? 's' : ''} you shared, so the squad can't use them any more? (Cancel to leave them for your mates.)`)) {
+        for (const w of mineShared) await fb.deleteDoc(fb.doc(fb.db, 'squads', code, 'workouts', w.docId)).catch(() => {});
+      }
       await fb.deleteDoc(fb.doc(fb.db, 'squads', code, 'members', user.uid)).catch(() => {});
       S.update((s) => { s.squads = (s.squads || []).filter((c) => c !== code); s.deleted = [...(s.deleted || []), 'squad:' + code]; });
       S.setSquadWorkouts(S.getSquadWorkouts().filter((w) => w.squad !== code));
@@ -355,8 +369,9 @@ export async function handle(act, el) {
     if (act === 'sqcopy') {
       const w = S.allWorkouts().find((x) => x.id === el.dataset.id);
       if (!w) return;
-      const copy = { ...w, id: 'c' + Date.now(), custom: true, squadShared: false, desc: (w.desc || '') + ` (from ${w.byName || 'squad'})` };
-      ['docId', 'squad', 'squadName', 'sharedFrom', 'byUid', 'byName'].forEach((k) => delete copy[k]);
+      const copy = { ...w, id: 'c' + Date.now(), custom: true, squadShared: false, desc: (w.desc || '') + ` (from ${w.byName || 'squad'})`, copiedFrom: w.id };
+      if (w.ranked) { copy.rankedLevel = w.ranked.level; copy.lvl = w.ranked.level; }
+      ['docId', 'squad', 'squadName', 'sharedFrom', 'byUid', 'byName', 'ranked', 'votes', 'needed', 'declaredLvl'].forEach((k) => delete copy[k]);
       S.update((st) => { st.custom.push(copy); });
       toast('Saved to your workouts');
       location.hash = '#/w/' + copy.id;
