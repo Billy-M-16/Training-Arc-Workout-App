@@ -372,8 +372,8 @@ views.settings = () => {
     <h1 class="title">Settings</h1>
     <div class="card form"><label>Your name <input type="text" data-input="name" value="${h(s.profile.name)}" placeholder="Billy"></label>
       <label>Usual session length <select data-input="defmin">${[15, 20, 25, 30, 35, 40, 45].map((m) => `<option ${se.defaultMin === m ? 'selected' : ''}>${m}</option>`).join('')}</select></label></div>
-    <div class="card"><div class="card-h">Equipment you have</div><p class="muted small">Workouts only use what's ticked. Max two pieces per workout.</p>
-      <div class="chips">${eqKeys.map((q) => `<button class="chip ${se.owned.includes(q) ? 'on' : ''}" data-act="own" data-q="${q}">${h(EQUIPMENT[q].name)}</button>`).join('')}</div></div>
+    <div class="card"><div class="card-h">Equipment you have</div><p class="muted small">Workouts only use what's ticked. Max two pieces per workout. ${se.owned.filter((q) => q !== 'run').length} ticked.</p>
+      ${[...new Set(eqKeys.map((q) => EQUIPMENT[q].group))].map((g) => `<div class="lbl">${h(g)}</div><div class="chips">${eqKeys.filter((q) => EQUIPMENT[q].group === g).map((q) => `<button class="chip ${se.owned.includes(q) ? 'on' : ''}" data-act="own" data-q="${q}">${h(EQUIPMENT[q].name)}</button>`).join('')}</div>`).join('')}</div>
     <div class="card"><div class="card-h">During workouts</div>
       ${tog('quiet', 'Quiet mode (no jumping, slamming or throwing)')}
       ${tog('voice', 'Voice cues')}${tog('beeps', 'Countdown beeps')}${tog('vibrate', 'Vibrate')}

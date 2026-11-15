@@ -221,6 +221,92 @@ const RAW = [
   ['skip_time', 'Skipping', ['rope'], 'cardio', 'a2 k1', 'L', 's', 'Steady rhythm, relaxed shoulders.'],
   ['skip_easy', 'Easy skipping', ['rope'], 'cardio_low', 'a1', 'L', 's', 'Relaxed bounce. Stay smooth.'],
 
+  // ---------- More home-gym kit ----------
+  // Ski erg
+  ['ski_cal', 'Ski erg', ['ski'], 'cardio', 'b1 s1', '', 'r', 'Hinge and drive the handles down past the hips. Count calories.'],
+  ['ski_time', 'Ski erg', ['ski'], 'cardio', 'b1 s1', '', 's', 'Strong pulls, use the hips, steady rhythm.'],
+  ['ski_easy', 'Easy ski erg', ['ski'], 'cardio_low', 's1', '', 's', 'Smooth and relaxed, conversation pace.'],
+  // Rower / bike / treadmill extras
+  ['row_time', 'Row', ['rower'], 'cardio', 'b1', '', 's', 'Legs, body, arms. Hard but repeatable.'],
+  ['row_easy', 'Easy row', ['rower'], 'cardio_low', 'b1', '', 's', 'Long smooth strokes, about 20 strokes a minute.'],
+  ['row_m', 'Row', ['rower'], 'cardio', 'b1', '', 'm', 'Strong drive with the legs, quick hands away.'],
+  ['bike_time', 'Bike', ['bike'], 'cardio', '', '', 's', 'Push hard, stay seated, breathe.'],
+  ['bike_easy', 'Easy ride', ['bike'], 'cardio_low', '', '', 's', 'Easy spin, conversation pace.'],
+  ['tread_run', 'Treadmill run', ['treadmill'], 'cardio', 'k2 a2', '', 's', 'Fast but controlled, stay off the rails.'],
+  ['tread_incline', 'Incline walk', ['treadmill'], 'cardio_low', 'a1', '', 's', 'Incline 8–12%, brisk walk, no holding on.'],
+  ['tread_jog', 'Treadmill jog', ['treadmill'], 'cardio_low', 'k1 a1', '', 's', 'Easy pace, relaxed.'],
+  // Sandbag / power bag
+  ['sb_clean', 'Sandbag clean', ['sandbag'], 'power', 'b2', '', 'r', 'Hinge, rip it up to the chest, catch in a squat.'],
+  ['sb_bearhug_squat', 'Sandbag bear-hug squat', ['sandbag'], 'squat', 'k2 b1', '', 'r', 'Hug the bag tight, sit deep, chest up.'],
+  ['sb_shoulder', 'Sandbag to shoulder', ['sandbag'], 'power', 'b2 s1', '', 'r', 'Floor to alternating shoulders. Reps are total.'],
+  ['sb_zercher', 'Sandbag Zercher squat', ['sandbag'], 'squat', 'k2 b1', '', 'r', 'Bag in the crook of the elbows, squat tall.'],
+  ['sb_lunge', 'Sandbag reverse lunge', ['sandbag'], 'lunge', 'k2', '', 'r', 'Bear-hug the bag, step back. Reps are total.'],
+  ['sb_row', 'Sandbag bent-over row', ['sandbag'], 'pull', 'b2', '', 'r', 'Hinge, pull the handles to the belly.'],
+  ['sb_press', 'Sandbag overhead press', ['sandbag'], 'push_v', 's2', '', 'r', 'From the chest, press up, ribs down.'],
+  ['sb_rdl', 'Sandbag RDL', ['sandbag'], 'hinge', 'b2 h1', '', 'r', 'Hips back, flat back, bag close to the legs.'],
+  ['sb_carry', 'Sandbag bear-hug march', ['sandbag'], 'carry', 'b1', '', 's', 'Hug it high, march tall on the spot.'],
+  ['sb_getup', 'Sandbag get-up', ['sandbag'], 'full', 'b1 k1', '', 'r', 'Bag on the shoulder, lie down, stand back up. Alternate.'],
+  // Slam ball
+  ['sball_slam', 'Slam ball slam', ['slamball'], 'power', 'b2 s1', 'L', 'r', 'Full extension, slam it hard. Outside or on a mat.'],
+  ['sball_over_shoulder', 'Ball over the shoulder', ['slamball'], 'power', 'b2', 'L', 'r', 'Pick up, extend and toss it over a shoulder. Alternate.'],
+  ['sball_clean', 'Slam ball squat clean', ['slamball'], 'full', 'k2 b1', '', 'r', 'Squat to the ball, explode up, catch at the chest.'],
+  ['sball_rot', 'Rotational slam', ['slamball'], 'core_rot', 'b2 s1', 'L', 'r', 'Slam to the outside of each foot. Reps are total.'],
+  ['sball_squat_press', 'Slam ball squat to press', ['slamball'], 'full', 'k1 s1', '', 'r', 'Quiet version: squat holding the ball, press overhead.'],
+  // Suspension trainer
+  ['trx_row', 'Suspension row', ['trx'], 'pull', '', '', 'r', 'Body straight, pull chest to hands. Walk feet in to make it harder.'],
+  ['trx_pushup', 'Suspension push-up', ['trx'], 'push_h', 's2 w1', '', 'r', 'Feet in the cradles or hands in the handles, tight core.'],
+  ['trx_squat', 'Suspension assisted squat', ['trx'], 'squat', 'k1', '', 'r', 'Hold the handles, sit back deep, stand tall.'],
+  ['trx_lunge', 'Suspension lunge', ['trx'], 'lunge', 'k2', 'U', 'r', 'Back foot in the cradle, drop straight down.'],
+  ['trx_ytw', 'Suspension Y-T-W', ['trx'], 'shoulder_iso', 's1', '', 'r', 'Arms straight, make Y, T, then W shapes.'],
+  ['trx_pike', 'Suspension pike', ['trx'], 'core', 's2 w1', '', 'r', 'Feet in the cradles, lift hips high.'],
+  ['trx_fallout', 'Suspension fallout', ['trx'], 'core', 's2 b2', '', 'r', 'Lean forward with straight arms, ribs down.'],
+  ['trx_ham_curl', 'Suspension hamstring curl', ['trx'], 'hinge', 'h1', '', 'r', 'Heels in the cradles, bridge up, curl in.'],
+  // Rings
+  ['ring_row', 'Ring row', ['rings'], 'pull', '', '', 'r', 'Body straight, pull and turn the rings out at the top.'],
+  ['ring_dip', 'Ring dip', ['rings'], 'arms_tri', 's3 e2', '', 'r', 'Rings close to the body, shoulders down.'],
+  ['ring_pushup', 'Ring push-up', ['rings'], 'push_h', 's2 w1', '', 'r', 'Rings low, turn them out at the top.'],
+  ['ring_support', 'Ring support hold', ['rings'], 'core', 's2', '', 's', 'Arms locked, rings by the hips, still.'],
+  // Battle rope
+  ['battle_waves', 'Battle rope waves', ['battle'], 'cardio', 's1', '', 's', 'Half squat, fast double-arm waves.'],
+  ['battle_alt', 'Battle rope alternating waves', ['battle'], 'cardio', 's1', '', 's', 'Alternate arms, keep the waves to the anchor.'],
+  ['battle_slams', 'Battle rope slams', ['battle'], 'power', 's1 b1', 'L', 's', 'Big overhead lift, slam with the whole body.'],
+  ['battle_circles', 'Battle rope circles', ['battle'], 'cardio_low', 's1', '', 's', 'Circle both arms outward, then inward.'],
+  // Weight vest
+  ['vest_walk', 'Weighted vest walk', ['vest'], 'cardio_low', 'k1', '', 's', 'Brisk walk with the vest on. Tall posture.'],
+  ['vest_squat', 'Weighted vest squat', ['vest'], 'squat', 'k2', '', 'r', 'Full depth, controlled.'],
+  ['vest_pushup', 'Weighted vest push-up', ['vest'], 'push_h', 's2 w2', '', 'r', 'Body in one line, chest to the floor.'],
+  ['vest_lunge', 'Weighted vest reverse lunge', ['vest'], 'lunge', 'k2', '', 'r', 'Step back, stay tall. Reps are total.'],
+  // Ab wheel
+  ['abwheel_knee', 'Ab wheel rollout (knees)', ['abwheel'], 'core', 'b1 s1', '', 'r', 'Ribs down, roll out only as far as the back stays flat.'],
+  ['abwheel_full', 'Ab wheel rollout (standing)', ['abwheel'], 'core', 'b2 s2', '', 'r', 'Advanced. Hollow body, no sagging.'],
+  // Dip station / parallettes
+  ['dip', 'Dip', ['dip'], 'arms_tri', 's3 e2', '', 'r', 'Shoulders down, lean slightly forward.'],
+  ['dip_knee_raise', 'Knee raise (dip station)', ['dip'], 'core', 's1', '', 'r', 'Support on the arms, knees to chest.'],
+  ['lsit', 'L-sit / tuck hold', ['dip'], 'core', 's1 h1', '', 's', 'Push down hard, tuck or straight legs.'],
+  // Stability ball
+  ['sw_ham_curl', 'Stability ball hamstring curl', ['swissball'], 'hinge', 'h1', '', 'r', 'Bridge up, curl the ball in, hips stay high.'],
+  ['sw_back_ext', 'Stability ball back extension', ['swissball'], 'core', 'b1', '', 'r', 'Hips on the ball, lift the chest gently. Back-friendly.'],
+  ['sw_stir_pot', 'Stir the pot', ['swissball'], 'core', 's1', '', 's', 'Forearms on the ball, small circles.'],
+  ['sw_pike', 'Stability ball pike', ['swissball'], 'core', 's2 w1', '', 'r', 'Feet on the ball, lift the hips high.'],
+  ['sw_crunch', 'Stability ball crunch', ['swissball'], 'core', 'n1', '', 'r', 'Lower back on the ball, curl up.'],
+  ['sw_pass', 'Stability ball pass', ['swissball'], 'core', 'b2 h1', '', 'r', 'Pass the ball from hands to feet and back.'],
+  // Mini loop bands
+  ['loop_walk', 'Mini-band lateral walk', ['loopband'], 'hinge', 'h1', '', 'r', 'Band above the knees, half squat, step wide. Steps are total.'],
+  ['loop_clam', 'Mini-band clamshell', ['loopband'], 'hinge', 'h1', 'U', 'r', 'Side-lying, open the knees, hips stay stacked.'],
+  ['loop_monster', 'Mini-band monster walk', ['loopband'], 'hinge', 'h1', '', 'r', 'Diagonal steps forward and back. Steps are total.'],
+  ['loop_squat', 'Mini-band squat', ['loopband'], 'squat', 'k1', '', 'r', 'Push the knees out into the band.'],
+  ['loop_kickback', 'Mini-band glute kickback', ['loopband'], 'hinge', 'h1', 'U', 'r', 'On all fours, kick back and up, squeeze.'],
+  ['loop_bridge', 'Mini-band glute bridge', ['loopband'], 'hinge', 'h1', '', 'r', 'Knees out against the band, bridge up, pause.'],
+  // Pull-up bar extras
+  ['dead_hang', 'Dead hang', ['pullup'], 'mobility', 's1', '', 's', 'Relax and hang. Great for the shoulders and spine.'],
+  ['scap_pull', 'Scapular pull-up', ['pullup'], 'pull', 's1', '', 'r', 'Arms straight, pull the shoulder blades down.'],
+  ['negative_pullup', 'Negative pull-up', ['pullup'], 'pull', 's2 e1', '', 'r', 'Jump or step up, lower slowly (3–5 seconds).'],
+  // Bench / box extras
+  ['incline_pushup', 'Incline push-up', ['bench'], 'push_h', 's1 w1', '', 'r', 'Hands on the bench, body straight. Easier than the floor.'],
+  ['decline_pushup', 'Decline push-up', ['bench'], 'push_h', 's2 w2', '', 'r', 'Feet on the bench, chest to the floor.'],
+  ['db_hip_thrust', 'DB hip thrust', ['db', 'bench'], 'hinge', 'h1', '', 'r', 'Shoulders on the bench, drive the hips up, pause.'],
+  ['box_step_over', 'Box step-over', ['box'], 'cardio', 'k2', '', 'r', 'Step up and over, alternate legs. Reps are total.'],
+
   // ---------- Box / bench / future kit ----------
   ['box_step_up', 'Box step-up', ['box'], 'lunge', 'k2', '', 'r', 'Drive through the heel, stand tall. Reps are total.'],
   ['box_jump', 'Box jump', ['box'], 'power', 'k2 a2', 'L', 'r', 'Land soft, step down.'],
@@ -255,30 +341,47 @@ for (const [id, name, eq, pattern, stress, flags, unit, cue] of RAW) {
 }
 
 export const EQUIPMENT = {
-  bw: { name: 'Bodyweight', short: 'BW' },
-  kb: { name: 'Kettlebell', short: 'KB' },
-  db: { name: 'Dumbbells', short: 'DB' },
-  bb: { name: 'Barbell', short: 'BB' },
-  sbb: { name: 'Small straight bar', short: 'Small bar' },
-  ez: { name: 'Curl bar', short: 'Curl bar' },
-  band: { name: 'Resistance band', short: 'Band' },
-  mb: { name: 'Medicine ball', short: 'Med ball' },
-  rope: { name: 'Skipping rope', short: 'Rope' },
-  run: { name: 'Running route', short: 'Run' },
-  box: { name: 'Box', short: 'Box' },
-  bench: { name: 'Bench', short: 'Bench' },
-  rack: { name: 'Squat rack', short: 'Rack' },
-  pullup: { name: 'Pull-up bar', short: 'Pull-up bar' },
-  rower: { name: 'Rowing machine', short: 'Rower' },
-  bike: { name: 'Exercise bike', short: 'Bike' },
+  bw: { name: 'Bodyweight', short: 'BW', group: '' },
+  // free weights
+  kb: { name: 'Kettlebell', short: 'KB', group: 'Free weights' },
+  db: { name: 'Dumbbells', short: 'DB', group: 'Free weights' },
+  sandbag: { name: 'Sandbag / power bag', short: 'Sandbag', group: 'Free weights' },
+  mb: { name: 'Medicine ball', short: 'Med ball', group: 'Free weights' },
+  slamball: { name: 'Slam ball', short: 'Slam ball', group: 'Free weights' },
+  vest: { name: 'Weight vest', short: 'Vest', group: 'Free weights' },
+  // bars
+  bb: { name: 'Barbell', short: 'BB', group: 'Bars and racks' },
+  sbb: { name: 'Small straight bar', short: 'Small bar', group: 'Bars and racks' },
+  ez: { name: 'Curl bar', short: 'Curl bar', group: 'Bars and racks' },
+  rack: { name: 'Squat rack', short: 'Rack', group: 'Bars and racks' },
+  bench: { name: 'Bench', short: 'Bench', group: 'Bars and racks' },
+  // bodyweight stations
+  pullup: { name: 'Pull-up bar', short: 'Pull-up bar', group: 'Bodyweight stations' },
+  rings: { name: 'Gymnastic rings', short: 'Rings', group: 'Bodyweight stations' },
+  trx: { name: 'Suspension trainer (TRX)', short: 'TRX', group: 'Bodyweight stations' },
+  dip: { name: 'Dip station / parallettes', short: 'Dip station', group: 'Bodyweight stations' },
+  box: { name: 'Plyo box / step', short: 'Box', group: 'Bodyweight stations' },
+  // cardio
+  rope: { name: 'Skipping rope', short: 'Rope', group: 'Cardio' },
+  run: { name: 'Running route', short: 'Run', group: 'Cardio' },
+  rower: { name: 'Rowing machine', short: 'Rower', group: 'Cardio' },
+  bike: { name: 'Exercise / air bike', short: 'Bike', group: 'Cardio' },
+  ski: { name: 'Ski erg', short: 'Ski erg', group: 'Cardio' },
+  treadmill: { name: 'Treadmill', short: 'Treadmill', group: 'Cardio' },
+  battle: { name: 'Battle rope', short: 'Battle rope', group: 'Cardio' },
+  // small stuff
+  band: { name: 'Resistance band (long)', short: 'Band', group: 'Bands and accessories' },
+  loopband: { name: 'Mini loop bands', short: 'Mini bands', group: 'Bands and accessories' },
+  swissball: { name: 'Stability ball', short: 'Stability ball', group: 'Bands and accessories' },
+  abwheel: { name: 'Ab wheel', short: 'Ab wheel', group: 'Bands and accessories' },
 };
 
 // Equipment that doesn't count toward the "max 2 pieces" rule
 export const FREE_EQUIPMENT = new Set(['bw', 'run']);
 
 // Suggested weight jumps (kg) per equipment, for progression suggestions
-export const WEIGHT_STEP = { kb: 4, db: 2, bb: 5, sbb: 2.5, ez: 2.5, mb: 2 };
-export const LOADED = new Set(['kb', 'db', 'bb', 'sbb', 'ez', 'mb']);
+export const WEIGHT_STEP = { kb: 4, db: 2, bb: 5, sbb: 2.5, ez: 2.5, mb: 2, sandbag: 5, slamball: 2, vest: 2.5 };
+export const LOADED = new Set(['kb', 'db', 'bb', 'sbb', 'ez', 'mb', 'sandbag', 'slamball', 'vest']);
 
 export const PATTERN_FALLBACK = {
   squat: ['squat', 'lunge', 'hinge', 'core'],

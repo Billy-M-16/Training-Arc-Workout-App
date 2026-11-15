@@ -5,9 +5,9 @@ A home-workout web app with an anime twist. Install it from Chrome onto your pho
 **Open it:** https://billy-m-16.github.io/Training-Arc-Workout-App/
 
 ## Features
-- 66 workouts across upper, lower, full body, core, cardio, and stretch/mobility, from 10 to 45 minutes and levels 1 to 5
+- 114 workouts across upper, lower, full body, core, cardio, and stretch/mobility, from 10 to 45 minutes and levels 1 to 5
 - Formats: supersets, intervals, Tabata, EMOM, AMRAP, ladders, pyramids, chippers, rounds for time, and flows
-- Max two pieces of equipment per workout, and only the kit you own
+- 28 kinds of home-gym equipment; max two pieces per workout, and only the kit you own
 - Quiet mode for indoors, with automatic swaps for jumps, slams and throws
 - Weekly check-in: mark injuries (niggle, go easy, off-limits) and exercises are swapped to safe alternatives
 - Training arcs of 1–8 weeks with an ease-in, deload weeks, recovery days and boss-fight benchmarks
